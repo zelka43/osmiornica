@@ -20,6 +20,7 @@ export async function addPlayer(name: string): Promise<Player> {
   const player: Player = {
     id: uuidv4(),
     displayName: name.trim(),
+    avatarUrl: null,
     createdAt: Date.now(),
     stats: { ...emptyStats },
   };
@@ -319,6 +320,39 @@ export async function importAllData(json: string): Promise<void> {
   }
 }
 
+// ─── Avatar Upload ───
+
+export async function uploadAvatar(
+  playerId: string,
+  file: File
+): Promise<string | null> {
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `${playerId}.${ext}`;
+
+  // Delete old avatar if exists
+  await supabase.storage.from("avatars").remove([path]);
+
+  const { error } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { upsert: true });
+
+  if (error) {
+    console.error("uploadAvatar error:", error);
+    return null;
+  }
+
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  // Add cache buster to force refresh
+  return data.publicUrl + "?t=" + Date.now();
+}
+
+export async function deleteAvatar(playerId: string): Promise<void> {
+  // Try common extensions
+  const extensions = ["jpg", "jpeg", "png", "gif", "webp"];
+  const paths = extensions.map((ext) => `${playerId}.${ext}`);
+  await supabase.storage.from("avatars").remove(paths);
+}
+
 // ─── Row mapping helpers ───
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -326,6 +360,7 @@ function mapPlayer(row: any): Player {
   return {
     id: row.id,
     displayName: row.display_name,
+    avatarUrl: row.avatar_url ?? null,
     createdAt: row.created_at,
     stats: row.stats ?? { ...emptyStats },
   };
@@ -335,6 +370,7 @@ function toPlayerRow(player: Player) {
   return {
     id: player.id,
     display_name: player.displayName,
+    avatar_url: player.avatarUrl,
     created_at: player.createdAt,
     stats: player.stats,
   };

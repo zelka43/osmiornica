@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Swords, ChevronDown, ChevronLeft, ChevronRight, Target } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
+import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { getPlayers, getMatchesBetweenPlayers } from "@/lib/store";
 import {
   calculateThreeDartAvg,
@@ -308,15 +309,12 @@ export default function H2HPage() {
                     <div className="flex items-center justify-between">
                       {/* Player 1 */}
                       <div className="flex flex-col items-center gap-2 flex-1">
-                        <div
-                          className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${
-                            PLAYER_COLORS[getColorIndex(player1Id)]
-                          } flex items-center justify-center shadow-lg`}
-                        >
-                          <span className="text-xl font-bold text-white">
-                            {p1?.displayName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        <PlayerAvatar
+                          avatarUrl={p1?.avatarUrl}
+                          displayName={p1?.displayName ?? "?"}
+                          colorIndex={getColorIndex(player1Id)}
+                          size="lg"
+                        />
                         <span className="text-sm font-semibold text-foreground text-center truncate max-w-[100px]">
                           {p1?.displayName}
                         </span>
@@ -337,15 +335,12 @@ export default function H2HPage() {
 
                       {/* Player 2 */}
                       <div className="flex flex-col items-center gap-2 flex-1">
-                        <div
-                          className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${
-                            PLAYER_COLORS[getColorIndex(player2Id)]
-                          } flex items-center justify-center shadow-lg`}
-                        >
-                          <span className="text-xl font-bold text-white">
-                            {p2?.displayName.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        <PlayerAvatar
+                          avatarUrl={p2?.avatarUrl}
+                          displayName={p2?.displayName ?? "?"}
+                          colorIndex={getColorIndex(player2Id)}
+                          size="lg"
+                        />
                         <span className="text-sm font-semibold text-foreground text-center truncate max-w-[100px]">
                           {p2?.displayName}
                         </span>

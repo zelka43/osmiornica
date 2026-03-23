@@ -33,7 +33,8 @@ import { updatePlayerStatsAfterMatch, calculateThreeDartAvg } from "@/lib/statsC
 import { processDartByDartTurn } from "@/lib/dartLogic";
 import DartInput from "@/components/match/DartInput";
 import PostMatchStats from "@/components/match/PostMatchStats";
-import type { Match, Turn, Dart } from "@/types";
+import PlayerAvatar from "@/components/ui/PlayerAvatar";
+import type { Match, Turn, Dart, Player } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
 const COLORS = [
@@ -67,14 +68,16 @@ export default function MatchPage({
   const [voiceLang, setVoiceLang] = useState<"en" | "pl">("en");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [inputMode, setInputMode] = useState<"quick" | "detailed">("detailed");
+  const [playersData, setPlayersData] = useState<Player[]>([]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const m = await getMatchById(id);
+      const [m, allPlayers] = await Promise.all([getMatchById(id), getPlayers()]);
       if (m) {
         setMatch(m);
       }
+      setPlayersData(allPlayers);
       setVoiceOn(isVoiceEnabled());
       setVoiceLang(getLanguage());
       try {
@@ -572,11 +575,12 @@ export default function MatchPage({
 
                 {/* Player avatar & name */}
                 <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className={`w-7 h-7 rounded-full bg-gradient-to-br ${COLORS[idx % COLORS.length]} flex items-center justify-center text-white text-xs font-bold shrink-0`}
-                  >
-                    {name.charAt(0).toUpperCase()}
-                  </div>
+                  <PlayerAvatar
+                    avatarUrl={playersData.find((p) => p.id === playerId)?.avatarUrl}
+                    displayName={name}
+                    colorIndex={idx}
+                    size="sm"
+                  />
                   <span className={`text-xs font-medium truncate ${isActive ? "text-neon-green font-bold" : "text-foreground"}`}>
                     {name}
                   </span>

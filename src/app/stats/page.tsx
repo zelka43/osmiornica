@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, TrendingUp, Award, ChevronLeft, ChevronRight } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
+import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { getPlayers, getMatches } from "@/lib/store";
 import {
   calculateThreeDartAvg,
@@ -250,15 +251,12 @@ export default function StatsPage() {
 
                         {/* Avatar + Name */}
                         <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className={`w-7 h-7 rounded-lg bg-gradient-to-br ${
-                              PLAYER_COLORS[r.colorIndex]
-                            } flex items-center justify-center shrink-0`}
-                          >
-                            <span className="text-xs font-bold text-white">
-                              {r.player.displayName.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+                          <PlayerAvatar
+                            avatarUrl={r.player.avatarUrl}
+                            displayName={r.player.displayName}
+                            colorIndex={r.colorIndex}
+                            size="sm"
+                          />
                           <span
                             className={`text-sm font-medium truncate ${
                               isTop ? "text-neon-green" : "text-foreground"

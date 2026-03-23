@@ -1,6 +1,7 @@
 export interface Player {
   id: string;
   displayName: string;
+  avatarUrl: string | null;
   createdAt: number;
   stats: PlayerStats;
 }

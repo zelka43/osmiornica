@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Target, ChevronRight, Shuffle } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
+import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { getPlayers } from "@/lib/store";
 import { Player, GameMode, PLAYER_COLORS } from "@/types";
 import { v4 as uuidv4 } from "uuid";
@@ -183,11 +184,12 @@ export default function NewMatchPage() {
                       }`}
                     >
                       {/* Avatar */}
-                      <div
-                        className={`w-10 h-10 rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center text-white font-bold text-sm shrink-0`}
-                      >
-                        {player.displayName.charAt(0).toUpperCase()}
-                      </div>
+                      <PlayerAvatar
+                        avatarUrl={player.avatarUrl}
+                        displayName={player.displayName}
+                        colorIndex={index}
+                        size="md"
+                      />
 
                       {/* Name */}
                       <span className="flex-1 text-left font-medium">
