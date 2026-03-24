@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Undo2 } from "lucide-react";
 import type { Dart } from "@/types";
 import { processDartByDartTurn } from "@/lib/dartLogic";
+import { getCheckout } from "@/lib/checkouts";
 
 interface DartInputProps {
   remaining: number;
@@ -151,6 +152,16 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
           </span>
         </div>
       </div>
+
+      {/* Live checkout hint */}
+      {canAddMore && !preview.isBust && previewRemaining <= 170 && previewRemaining > 1 && getCheckout(previewRemaining) && (
+        <div className="glass-light rounded-xl px-4 py-1.5 text-center">
+          <span className="text-xs text-muted">Zamknięcie: </span>
+          <span className="font-mono text-sm text-neon-yellow font-medium">
+            {getCheckout(previewRemaining)}
+          </span>
+        </div>
+      )}
 
       {/* Multiplier toggle */}
       {canAddMore && (

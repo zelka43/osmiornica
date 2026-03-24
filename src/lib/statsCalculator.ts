@@ -1,6 +1,6 @@
 import type { PlayerStats, PlayerMatchState, Match } from "@/types";
 
-export type TimePeriod = "all" | "yearly" | "monthly" | "weekly";
+export type TimePeriod = "all" | "yearly" | "monthly" | "weekly" | "daily";
 
 export interface PeriodRange {
   label: string;
@@ -35,6 +35,15 @@ export function getPeriodRange(period: TimePeriod, offset: number): PeriodRange 
       label: `${MONTH_NAMES_PL[d.getMonth()]} ${d.getFullYear()}`,
       start: d.getTime(),
       end: new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime(),
+    };
+  }
+
+  if (period === "daily") {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    return {
+      label: d.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }),
+      start: d.getTime(),
+      end: new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime(),
     };
   }
 

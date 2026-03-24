@@ -33,6 +33,7 @@ const PERIOD_LABELS: Record<TimePeriod, string> = {
   yearly: "Rok",
   monthly: "Miesiąc",
   weekly: "Tydzień",
+  daily: "Dzień",
 };
 
 interface H2HStats {

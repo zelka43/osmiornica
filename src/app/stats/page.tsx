@@ -34,6 +34,7 @@ const PERIOD_LABELS: Record<TimePeriod, string> = {
   yearly: "Rok",
   monthly: "Miesiąc",
   weekly: "Tydzień",
+  daily: "Dzień",
 };
 
 interface RankedPlayer {
@@ -211,7 +212,8 @@ export default function StatsPage() {
             <>
               {/* Table Header */}
               <motion.div variants={item}>
-                <div className="glass rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto -mx-4 px-4">
+                <div className="glass rounded-2xl overflow-hidden min-w-[600px]">
                   <div className="grid grid-cols-[2.5rem_1fr_3rem_3rem_3.5rem_3.5rem_3.5rem_2.5rem] gap-1 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted border-b border-white/5">
                     <span className="text-center">#</span>
                     <span>Gracz</span>
@@ -308,6 +310,7 @@ export default function StatsPage() {
                       </motion.div>
                     );
                   })}
+                </div>
                 </div>
               </motion.div>
 

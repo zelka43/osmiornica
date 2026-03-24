@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Target, BarChart3, Users, Swords, History } from "lucide-react";
+import { Home, Target, BarChart3, Users, Swords, History, Maximize2, Minimize2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const tabs = [
@@ -16,6 +17,25 @@ const tabs = [
 
 export default function NavBar() {
   const pathname = usePathname();
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {}
+  };
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -65,6 +85,18 @@ export default function NavBar() {
             </Link>
           );
         })}
+
+        {/* Fullscreen toggle */}
+        <button
+          onClick={toggleFullscreen}
+          className="flex flex-col items-center justify-center w-10 h-full gap-1 transition-colors"
+        >
+          {isFullscreen ? (
+            <Minimize2 size={18} className="text-muted" />
+          ) : (
+            <Maximize2 size={18} className="text-muted" />
+          )}
+        </button>
       </div>
     </nav>
   );

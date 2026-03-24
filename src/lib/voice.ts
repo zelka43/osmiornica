@@ -90,6 +90,42 @@ export function speak(
 }
 
 /**
+ * Converts a number (0–501) to Polish cardinal words.
+ */
+function numberToPolishWords(n: number): string {
+  if (n === 0) return "zero";
+
+  const ones = [
+    "", "jeden", "dwa", "trzy", "cztery", "pięć", "sześć", "siedem", "osiem", "dziewięć",
+    "dziesięć", "jedenaście", "dwanaście", "trzynaście", "czternaście", "piętnaście",
+    "szesnaście", "siedemnaście", "osiemnaście", "dziewiętnaście",
+  ];
+  const tens = [
+    "", "", "dwadzieścia", "trzydzieści", "czterdzieści", "pięćdziesiąt",
+    "sześćdziesiąt", "siedemdziesiąt", "osiemdziesiąt", "dziewięćdziesiąt",
+  ];
+  const hundreds = ["", "sto", "dwieście", "trzysta", "czterysta", "pięćset"];
+
+  const parts: string[] = [];
+
+  if (n >= 100) {
+    parts.push(hundreds[Math.floor(n / 100)]);
+    n = n % 100;
+  }
+
+  if (n >= 20) {
+    parts.push(tens[Math.floor(n / 10)]);
+    n = n % 10;
+  }
+
+  if (n > 0) {
+    parts.push(ones[n]);
+  }
+
+  return parts.join(" ");
+}
+
+/**
  * Announces the score like a professional dart referee, with emotional intonation.
  */
 export function announceScore(
@@ -155,25 +191,25 @@ function announceScorePL(
     pitch = 1.3;
     rate = 1.1;
   } else if (turnTotal >= 140) {
-    scoreCall = `${turnTotal}!`;
+    scoreCall = `${numberToPolishWords(turnTotal)}!`;
     pitch = 1.2;
     rate = 1.05;
   } else if (turnTotal >= 100) {
-    scoreCall = `${turnTotal}!`;
+    scoreCall = `${numberToPolishWords(turnTotal)}!`;
     pitch = 1.1;
   } else if (turnTotal === 0) {
     scoreCall = "Brak punktów!";
     pitch = 0.8;
     rate = 0.85;
   } else if (turnTotal < 20) {
-    scoreCall = `${turnTotal}.`;
+    scoreCall = `${numberToPolishWords(turnTotal)}.`;
     pitch = 0.9;
     rate = 0.95;
   } else {
-    scoreCall = `${turnTotal}.`;
+    scoreCall = `${numberToPolishWords(turnTotal)}.`;
   }
 
-  speak(`${scoreCall} ${playerName} potrzebuje ${remaining}.`, { pitch, rate });
+  speak(`${scoreCall} ${playerName} potrzebuje ${numberToPolishWords(remaining)}.`, { pitch, rate });
 }
 
 /**

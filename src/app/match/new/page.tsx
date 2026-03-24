@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Target, ChevronRight, Shuffle } from "lucide-react";
+import { Target, ChevronRight } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { getPlayers } from "@/lib/store";
@@ -13,25 +13,57 @@ import { createInitialMatchState } from "@/lib/dartLogic";
 import { setActiveMatch, saveMatch } from "@/lib/store";
 import type { Match } from "@/types";
 
+type OrderMode = "ranking" | "manual" | "random";
+
 export default function NewMatchPage() {
   const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [gameMode, setGameMode] = useState<GameMode>("501");
+  const [orderMode, setOrderMode] = useState<OrderMode>("ranking");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     async function load() {
       setPlayers(await getPlayers());
+      try {
+        const savedOrder = localStorage.getItem("dart_player_order_mode");
+        if (savedOrder === "ranking" || savedOrder === "manual" || savedOrder === "random") {
+          setOrderMode(savedOrder);
+        }
+      } catch {}
       setMounted(true);
     }
     load();
   }, []);
 
+  const sortByRanking = useCallback(
+    (ids: string[]): string[] => {
+      return [...ids].sort((a, b) => {
+        const pa = players.find((p) => p.id === a);
+        const pb = players.find((p) => p.id === b);
+        const winPctA =
+          pa && pa.stats.matchesPlayed > 0
+            ? (pa.stats.matchesWon / pa.stats.matchesPlayed) * 100
+            : 0;
+        const winPctB =
+          pb && pb.stats.matchesPlayed > 0
+            ? (pb.stats.matchesWon / pb.stats.matchesPlayed) * 100
+            : 0;
+        return winPctA - winPctB; // ascending = worst first
+      });
+    },
+    [players]
+  );
+
   const togglePlayer = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
+    setSelectedIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id];
+      if (orderMode === "ranking") {
+        return sortByRanking(next);
+      }
+      return next;
+    });
   };
 
   const shuffleOrder = () => {
@@ -43,6 +75,15 @@ export default function NewMatchPage() {
       }
       return shuffled;
     });
+  };
+
+  const handleOrderModeChange = (mode: OrderMode) => {
+    setOrderMode(mode);
+    try {
+      localStorage.setItem("dart_player_order_mode", mode);
+    } catch {}
+    if (mode === "random") shuffleOrder();
+    if (mode === "ranking") setSelectedIds((prev) => sortByRanking(prev));
   };
 
   const startMatch = async () => {
@@ -145,13 +186,25 @@ export default function NewMatchPage() {
                 Gracze ({selectedIds.length} wybranych)
               </h2>
               {selectedIds.length > 1 && (
-                <button
-                  onClick={shuffleOrder}
-                  className="flex items-center gap-1.5 text-xs text-neon-blue hover:text-neon-blue/80 transition-colors"
-                >
-                  <Shuffle size={14} />
-                  Losuj kolejność
-                </button>
+                <div className="flex gap-1 p-0.5 bg-surface rounded-lg">
+                  {([
+                    { mode: "ranking" as OrderMode, label: "Ranking" },
+                    { mode: "manual" as OrderMode, label: "Ręczna" },
+                    { mode: "random" as OrderMode, label: "Losowa" },
+                  ]).map(({ mode, label }) => (
+                    <button
+                      key={mode}
+                      onClick={() => handleOrderModeChange(mode)}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                        orderMode === mode
+                          ? "bg-neon-blue/15 text-neon-blue"
+                          : "text-muted"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -170,7 +223,6 @@ export default function NewMatchPage() {
                 {players.map((player, index) => {
                   const isSelected = selectedIds.includes(player.id);
                   const orderIndex = selectedIds.indexOf(player.id);
-                  const colorClass = PLAYER_COLORS[index % PLAYER_COLORS.length];
 
                   return (
                     <motion.button

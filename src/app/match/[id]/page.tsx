@@ -70,6 +70,15 @@ export default function MatchPage({
   const [inputMode, setInputMode] = useState<"quick" | "detailed">("detailed");
   const [playersData, setPlayersData] = useState<Player[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [showDoublesModal, setShowDoublesModal] = useState(false);
+  const [pendingQuickTurn, setPendingQuickTurn] = useState<{
+    score: number;
+    isDoubleFinish: boolean;
+    result: { newRemaining: number; isBust: boolean; isCheckout: boolean };
+    currentPlayerId: string;
+    currentPlayerName: string;
+    currentState: import("@/types").PlayerMatchState;
+  } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -300,6 +309,40 @@ export default function MatchPage({
 
     const result = processTurn(currentState.remaining, score, isDoubleFinish);
 
+    // In quick mode, if player was in checkout range and turn is not a bust, ask about doubles
+    if (
+      inputMode === "quick" &&
+      currentState.remaining <= 170 &&
+      !result.isBust
+    ) {
+      setPendingQuickTurn({
+        score,
+        isDoubleFinish,
+        result,
+        currentPlayerId,
+        currentPlayerName,
+        currentState,
+      });
+      setShowDoublesModal(true);
+      setInputValue("");
+      return;
+    }
+
+    // Otherwise proceed directly (bust, or not in checkout range, or detailed mode)
+    await finalizeQuickTurn(score, isDoubleFinish, result, currentPlayerId, currentPlayerName, currentState, 0);
+  };
+
+  const finalizeQuickTurn = async (
+    score: number,
+    isDoubleFinish: boolean,
+    result: { newRemaining: number; isBust: boolean; isCheckout: boolean },
+    currentPlayerId: string,
+    currentPlayerName: string,
+    currentState: import("@/types").PlayerMatchState,
+    doublesAttemptedCount: number
+  ) => {
+    if (!match) return;
+
     const turn: Turn = {
       id: uuidv4(),
       playerId: currentPlayerId,
@@ -322,10 +365,7 @@ export default function MatchPage({
         : currentState.pointsScored + score,
       oneEighties: score === 180 ? currentState.oneEighties + 1 : currentState.oneEighties,
       tonPlus: score >= 100 && score < 180 ? currentState.tonPlus + 1 : currentState.tonPlus,
-      doublesAttempted:
-        result.newRemaining <= 50 || currentState.remaining - score <= 0
-          ? currentState.doublesAttempted + 1
-          : currentState.doublesAttempted,
+      doublesAttempted: currentState.doublesAttempted + doublesAttemptedCount,
       doublesHit: result.isCheckout
         ? currentState.doublesHit + 1
         : currentState.doublesHit,
@@ -363,7 +403,6 @@ export default function MatchPage({
     if (result.isCheckout) {
       setLastAction("checkout");
       announceCheckout(currentPlayerName);
-      // Update stats
       await finalizeMatch(updated);
       setTimeout(() => setShowWinModal(true), 500);
     } else if (result.isBust) {
@@ -374,8 +413,15 @@ export default function MatchPage({
       announceScore(currentPlayerName, score, result.newRemaining);
     }
 
-    // Clear animation state
     setTimeout(() => setLastAction(null), 1500);
+  };
+
+  const handleDoublesAnswer = async (count: number) => {
+    if (!pendingQuickTurn) return;
+    setShowDoublesModal(false);
+    const { score, isDoubleFinish, result, currentPlayerId, currentPlayerName, currentState } = pendingQuickTurn;
+    setPendingQuickTurn(null);
+    await finalizeQuickTurn(score, isDoubleFinish, result, currentPlayerId, currentPlayerName, currentState, count);
   };
 
   const finalizeMatch = async (completedMatch: Match) => {
@@ -616,9 +662,10 @@ export default function MatchPage({
                 </div>
 
                 {/* Stats */}
-                <div className="flex justify-between mt-2 text-[10px] text-muted">
-                  <span>Śr: {avg.toFixed(1)}</span>
-                  <span>{state.dartsThrown} rz.</span>
+                <div className="flex justify-center mt-2">
+                  <span className="text-xs font-bold font-mono text-muted">
+                    Śr: {avg.toFixed(1)}
+                  </span>
                 </div>
               </motion.div>
             );
@@ -957,6 +1004,48 @@ export default function MatchPage({
                 >
                   Opuść mecz
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Doubles tracking modal (quick mode) */}
+      <AnimatePresence>
+        {showDoublesModal && pendingQuickTurn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass rounded-2xl p-6 w-full max-w-sm text-center"
+            >
+              <h3 className="text-lg font-bold mb-2">
+                {pendingQuickTurn.result.isCheckout
+                  ? "Ile prób na dable?"
+                  : "Ile lotek celowane w dable?"}
+              </h3>
+              <p className="text-sm text-muted mb-4">
+                {pendingQuickTurn.result.isCheckout
+                  ? "Ile lotek celowałeś w dable zanim trafiłeś?"
+                  : "Ile z 3 lotek celowałeś w dable?"}
+              </p>
+              <div className={`grid ${pendingQuickTurn.result.isCheckout ? "grid-cols-3" : "grid-cols-4"} gap-3`}>
+                {(pendingQuickTurn.result.isCheckout ? [1, 2, 3] : [0, 1, 2, 3]).map((n) => (
+                  <motion.button
+                    key={n}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleDoublesAnswer(n)}
+                    className="rounded-xl p-4 bg-surface hover:bg-surface-light text-foreground font-mono text-2xl font-bold transition-all border border-border"
+                  >
+                    {n}
+                  </motion.button>
+                ))}
               </div>
             </motion.div>
           </motion.div>
