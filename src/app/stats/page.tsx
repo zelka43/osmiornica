@@ -247,7 +247,7 @@ export default function StatsPage() {
               <motion.div variants={item}>
                 <div className="overflow-x-auto -mx-4 px-4">
                 <div className="glass rounded-2xl overflow-hidden min-w-[600px]">
-                  <div className="grid grid-cols-[2.5rem_1fr_3rem_3rem_3.5rem_3.5rem_3.5rem_2.5rem] gap-1 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted border-b border-white/5">
+                  <div className="grid grid-cols-[2rem_6rem_2.5rem_2.5rem_3rem_3.5rem_3rem_2.5rem] gap-1 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted border-b border-white/5">
                     <span className="text-center">#</span>
                     <span>Gracz</span>
                     <span className="text-center">M</span>
@@ -265,7 +265,7 @@ export default function StatsPage() {
                       <motion.div
                         key={r.player.id}
                         variants={item}
-                        className={`grid grid-cols-[2.5rem_1fr_3rem_3rem_3.5rem_3.5rem_3.5rem_2.5rem] gap-1 items-center px-3 py-3 transition-colors ${
+                        className={`grid grid-cols-[2rem_6rem_2.5rem_2.5rem_3rem_3.5rem_3rem_2.5rem] gap-1 items-center px-3 py-3 transition-colors ${
                           isTop
                             ? "bg-neon-green/[0.04] glow-green"
                             : "hover:bg-white/[0.02]"
