@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import NavBar from "@/components/ui/NavBar";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import DartboardHeatmap from "@/components/ui/DartboardHeatmap";
-import { getPlayers, getMatches, getAppSetting, getH2HRecords } from "@/lib/store";
+import { getPlayers, getMatches, getAppSetting } from "@/lib/store";
 import {
   calculateThreeDartAvg,
   calculateCheckoutPercentage,
@@ -33,7 +33,7 @@ import {
   type AchievementKey,
   type AchievementEntry,
 } from "@/lib/statsCalculator";
-import type { Player, Match, H2HRecord } from "@/types";
+import type { Player, Match } from "@/types";
 import { PLAYER_COLORS } from "@/types";
 
 const container = {
@@ -105,7 +105,6 @@ export default function PlayersPage() {
   const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [h2hRecords, setH2hRecords] = useState<H2HRecord[]>([]);
   const [mounted, setMounted] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rankingMode, setRankingMode] = useState<RankingMode>("winpct");
@@ -114,10 +113,9 @@ export default function PlayersPage() {
 
   useEffect(() => {
     async function load() {
-      const [p, m, mode, h2h] = await Promise.all([getPlayers(), getMatches(), getAppSetting("ranking_mode"), getH2HRecords()]);
+      const [p, m, mode] = await Promise.all([getPlayers(), getMatches(), getAppSetting("ranking_mode")]);
       setPlayers(p);
       setMatches(m);
-      setH2hRecords(h2h);
       if (mode === "points" || mode === "winpct" || mode === "rating") setRankingMode(mode);
       if (p.length > 0) setSelectedId(p[0].id);
       setMounted(true);
@@ -174,22 +172,33 @@ export default function PlayersPage() {
   const nemesisOfiara = useMemo(() => {
     if (!selected) return null;
     const id = selected.id;
-    const relevant = h2hRecords.filter((r) => r.player1Id === id || r.player2Id === id);
-    const withStats = relevant
-      .map((r) => {
-        const myWins  = r.player1Id === id ? r.player1Wins : r.player2Wins;
-        const oppWins = r.player1Id === id ? r.player2Wins : r.player1Wins;
-        const oppId   = r.player1Id === id ? r.player2Id   : r.player1Id;
-        return { oppId, myWins, oppWins, total: r.totalMatches };
-      })
-      .filter((r) => r.total >= 1);
-    if (withStats.length === 0) return null;
-    const nemesis = [...withStats].sort((a, b) => b.oppWins - a.oppWins)[0];
-    const ofiara  = [...withStats].sort((a, b) => b.myWins  - a.myWins )[0];
-    const nemesisPlayer = players.find((p) => p.id === nemesis.oppId) ?? null;
-    const ofiaraPlayer  = players.find((p) => p.id === ofiara.oppId)  ?? null;
-    return { nemesis: { ...nemesis, player: nemesisPlayer }, ofiara: { ...ofiara, player: ofiaraPlayer } };
-  }, [selected, h2hRecords, players]);
+    // Compute head-to-head directly from match history (more reliable than h2h_records table)
+    const h2h: Record<string, { myWins: number; oppWins: number }> = {};
+    for (const match of completedMatches) {
+      if (!match.playerIds.includes(id) || !match.winnerId) continue;
+      if (match.winnerId === id) {
+        // Player won — count win against each other participant
+        for (const oppId of match.playerIds) {
+          if (oppId === id) continue;
+          if (!h2h[oppId]) h2h[oppId] = { myWins: 0, oppWins: 0 };
+          h2h[oppId].myWins++;
+        }
+      } else {
+        // Player lost — count loss to the winner
+        const oppId = match.winnerId;
+        if (!h2h[oppId]) h2h[oppId] = { myWins: 0, oppWins: 0 };
+        h2h[oppId].oppWins++;
+      }
+    }
+    const entries = Object.entries(h2h).map(([oppId, s]) => ({ oppId, ...s }));
+    if (entries.length === 0) return null;
+    const nemesis = [...entries].sort((a, b) => b.oppWins - a.oppWins)[0];
+    const ofiara  = [...entries].sort((a, b) => b.myWins  - a.myWins )[0];
+    return {
+      nemesis: { ...nemesis, player: players.find((p) => p.id === nemesis.oppId) ?? null },
+      ofiara:  { ...ofiara,  player: players.find((p) => p.id === ofiara.oppId)  ?? null },
+    };
+  }, [selected, completedMatches, players]);
 
   if (!mounted) {
     return (
