@@ -128,7 +128,17 @@ export default function PlayersPage() {
     () =>
       [...players]
         .filter((p) => p.stats.matchesPlayed > 0)
-        .sort((a, b) => computeRatingValue(b, matches, rankingMode) - computeRatingValue(a, matches, rankingMode))
+        .sort((a, b) => {
+          const primary = computeRatingValue(b, matches, rankingMode) - computeRatingValue(a, matches, rankingMode);
+          if (primary !== 0) return primary;
+          const avgA = a.stats.totalDartsThrown > 0 ? (a.stats.totalPointsScored / a.stats.totalDartsThrown) * 3 : 0;
+          const avgB = b.stats.totalDartsThrown > 0 ? (b.stats.totalPointsScored / b.stats.totalDartsThrown) * 3 : 0;
+          if (avgB !== avgA) return avgB - avgA;
+          const coA = a.stats.doublesAttempted > 0 ? a.stats.doublesHit / a.stats.doublesAttempted : 0;
+          const coB = b.stats.doublesAttempted > 0 ? b.stats.doublesHit / b.stats.doublesAttempted : 0;
+          if (coB !== coA) return coB - coA;
+          return (b.stats.tonPlus + b.stats.oneEighties) - (a.stats.tonPlus + a.stats.oneEighties);
+        })
         .concat(players.filter((p) => p.stats.matchesPlayed === 0)),
     [players, matches, rankingMode]
   );
@@ -359,7 +369,7 @@ export default function PlayersPage() {
           {/* ── SECTION: Nemesis / Ofiara ── */}
           {selected && nemesisOfiara && (
             <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Rywaleria</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Pojedynki</p>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

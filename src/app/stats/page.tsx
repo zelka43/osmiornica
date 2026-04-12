@@ -46,6 +46,7 @@ interface RankedPlayer {
   colorIndex: number;
   points: number;
   rating: number;
+  tonPlus: number;
 }
 
 export default function StatsPage() {
@@ -113,20 +114,26 @@ export default function StatsPage() {
         const expectedWins = periodMatches.reduce((sum, m) => sum + 1 / m.playerIds.length, 0);
         const rating = expectedWins > 0 ? actualWins / expectedWins : 0;
 
-        return { player, stats, winPct, threeDartAvg, checkoutPct, colorIndex, points, rating };
+        const tonPlus = stats.tonPlus + stats.oneEighties;
+        return { player, stats, winPct, threeDartAvg, checkoutPct, colorIndex, points, rating, tonPlus };
       })
       .filter((r): r is RankedPlayer => r !== null)
       .sort((a, b) => {
+        const tiebreak = () => {
+          if (b.threeDartAvg !== a.threeDartAvg) return b.threeDartAvg - a.threeDartAvg;
+          if (b.checkoutPct  !== a.checkoutPct)  return b.checkoutPct  - a.checkoutPct;
+          return b.tonPlus - a.tonPlus;
+        };
         if (rankingMode === "points") {
           if (b.points !== a.points) return b.points - a.points;
-          return b.threeDartAvg - a.threeDartAvg;
+          return tiebreak();
         }
         if (rankingMode === "rating") {
           if (b.rating !== a.rating) return b.rating - a.rating;
-          return b.threeDartAvg - a.threeDartAvg;
+          return tiebreak();
         }
         if (b.winPct !== a.winPct) return b.winPct - a.winPct;
-        return b.threeDartAvg - a.threeDartAvg;
+        return tiebreak();
       });
   }, [players, matches, period, offset, currentRange, rankingMode]);
 
