@@ -37,6 +37,14 @@ const PERIOD_LABELS: Record<TimePeriod, string> = {
   daily: "Dzień",
 };
 
+const MIN_MATCHES: Record<TimePeriod, number> = {
+  all: 25,
+  yearly: 50,
+  monthly: 15,
+  weekly: 5,
+  daily: 0,
+};
+
 interface RankedPlayer {
   player: Player;
   stats: PlayerStats;
@@ -72,8 +80,28 @@ export default function StatsPage() {
 
   const currentRange = useMemo(() => getPeriodRange(period, offset), [period, offset]);
 
-  const ranked: RankedPlayer[] = useMemo(() => {
-    return players
+  const { rankedRows, unrankedRows } = useMemo(() => {
+    const minMatches = MIN_MATCHES[period];
+
+    const sortFn = (a: RankedPlayer, b: RankedPlayer) => {
+      const tiebreak = () => {
+        if (b.threeDartAvg !== a.threeDartAvg) return b.threeDartAvg - a.threeDartAvg;
+        if (b.checkoutPct  !== a.checkoutPct)  return b.checkoutPct  - a.checkoutPct;
+        return b.tonPlus - a.tonPlus;
+      };
+      if (rankingMode === "points") {
+        if (b.points !== a.points) return b.points - a.points;
+        return tiebreak();
+      }
+      if (rankingMode === "rating") {
+        if (b.rating !== a.rating) return b.rating - a.rating;
+        return tiebreak();
+      }
+      if (b.winPct !== a.winPct) return b.winPct - a.winPct;
+      return tiebreak();
+    };
+
+    const all: RankedPlayer[] = players
       .map((player) => {
         const stats =
           period === "all" && offset === 0
@@ -103,13 +131,11 @@ export default function StatsPage() {
             m.createdAt < currentRange.end
         );
 
-        // Mode 2: Points = total defeated players × win rate
         const playersDefeated = periodMatches
           .filter((m) => m.winnerId === player.id)
           .reduce((sum, m) => sum + m.playerIds.length - 1, 0);
         const points = playersDefeated * (winPct / 100);
 
-        // Mode 3: Rating = actual wins / expected wins (Σ 1/n per match)
         const actualWins = periodMatches.filter((m) => m.winnerId === player.id).length;
         const expectedWins = periodMatches.reduce((sum, m) => sum + 1 / m.playerIds.length, 0);
         const rating = expectedWins > 0 ? actualWins / expectedWins : 0;
@@ -117,25 +143,15 @@ export default function StatsPage() {
         const tonPlus = stats.tonPlus + stats.oneEighties;
         return { player, stats, winPct, threeDartAvg, checkoutPct, colorIndex, points, rating, tonPlus };
       })
-      .filter((r): r is RankedPlayer => r !== null)
-      .sort((a, b) => {
-        const tiebreak = () => {
-          if (b.threeDartAvg !== a.threeDartAvg) return b.threeDartAvg - a.threeDartAvg;
-          if (b.checkoutPct  !== a.checkoutPct)  return b.checkoutPct  - a.checkoutPct;
-          return b.tonPlus - a.tonPlus;
-        };
-        if (rankingMode === "points") {
-          if (b.points !== a.points) return b.points - a.points;
-          return tiebreak();
-        }
-        if (rankingMode === "rating") {
-          if (b.rating !== a.rating) return b.rating - a.rating;
-          return tiebreak();
-        }
-        if (b.winPct !== a.winPct) return b.winPct - a.winPct;
-        return tiebreak();
-      });
+      .filter((r): r is RankedPlayer => r !== null);
+
+    const ranked = all.filter((r) => r.stats.matchesPlayed >= minMatches).sort(sortFn);
+    const unranked = all.filter((r) => r.stats.matchesPlayed < minMatches).sort(sortFn);
+
+    return { rankedRows: ranked, unrankedRows: unranked };
   }, [players, matches, period, offset, currentRange, rankingMode]);
+
+  const ranked = [...rankedRows, ...unrankedRows];
 
   if (!mounted) {
     return (
@@ -265,8 +281,8 @@ export default function StatsPage() {
                     <span className="text-center">100+</span>
                   </div>
 
-                  {/* Table Rows */}
-                  {ranked.map((r, idx) => {
+                  {/* Ranked Rows */}
+                  {rankedRows.map((r, idx) => {
                     const isTop = idx === 0;
                     return (
                       <motion.div
@@ -276,13 +292,8 @@ export default function StatsPage() {
                           isTop
                             ? "bg-neon-green/[0.04] glow-green"
                             : "hover:bg-white/[0.02]"
-                        } ${
-                          idx < ranked.length - 1
-                            ? "border-b border-white/5"
-                            : ""
-                        }`}
+                        } border-b border-white/5`}
                       >
-                        {/* Position */}
                         <span
                           className={`text-center font-mono font-bold text-sm ${
                             isTop ? "text-neon-green" : "text-muted"
@@ -290,8 +301,6 @@ export default function StatsPage() {
                         >
                           {idx + 1}
                         </span>
-
-                        {/* Avatar + Name */}
                         <div className="flex items-center gap-2 min-w-0">
                           <PlayerAvatar
                             avatarUrl={r.player.avatarUrl}
@@ -307,53 +316,60 @@ export default function StatsPage() {
                             {r.player.displayName}
                           </span>
                           {isTop && (
-                            <Award
-                              size={14}
-                              className="text-neon-yellow shrink-0"
-                            />
+                            <Award size={14} className="text-neon-yellow shrink-0" />
                           )}
                         </div>
-
-                        {/* Matches Played */}
-                        <span className="text-center font-mono text-sm text-muted">
-                          {r.stats.matchesPlayed}
+                        <span className="text-center font-mono text-sm text-muted">{r.stats.matchesPlayed}</span>
+                        <span className="text-center font-mono text-sm text-foreground">{r.stats.matchesWon}</span>
+                        <span className={`text-center font-mono text-sm font-semibold ${isTop ? "text-neon-green" : "text-foreground"}`}>
+                          {rankingMode === "points" ? r.points.toFixed(1) : rankingMode === "rating" ? r.rating.toFixed(2) : r.winPct.toFixed(0)}
                         </span>
-
-                        {/* Wins */}
-                        <span className="text-center font-mono text-sm text-foreground">
-                          {r.stats.matchesWon}
-                        </span>
-
-                        {/* Win % or Points */}
-                        <span
-                          className={`text-center font-mono text-sm font-semibold ${
-                            isTop ? "text-neon-green" : "text-foreground"
-                          }`}
-                        >
-                          {rankingMode === "points"
-                            ? r.points.toFixed(1)
-                            : rankingMode === "rating"
-                            ? r.rating.toFixed(2)
-                            : r.winPct.toFixed(0)}
-                        </span>
-
-                        {/* 3-dart avg */}
-                        <span className="text-center font-mono text-sm text-neon-blue">
-                          {r.threeDartAvg.toFixed(1)}
-                        </span>
-
-                        {/* Checkout % */}
-                        <span className="text-center font-mono text-sm text-neon-purple">
-                          {r.checkoutPct.toFixed(1)}
-                        </span>
-
-                        {/* 180s */}
-                        <span className="text-center font-mono text-sm text-neon-yellow">
-                          {r.stats.tonPlus + r.stats.oneEighties}
-                        </span>
+                        <span className="text-center font-mono text-sm text-neon-blue">{r.threeDartAvg.toFixed(1)}</span>
+                        <span className="text-center font-mono text-sm text-neon-purple">{r.checkoutPct.toFixed(1)}</span>
+                        <span className="text-center font-mono text-sm text-neon-yellow">{r.stats.tonPlus + r.stats.oneEighties}</span>
                       </motion.div>
                     );
                   })}
+
+                  {/* Separator — unranked players */}
+                  {unrankedRows.length > 0 && rankedRows.length > 0 && (
+                    <div className="border-t border-dashed border-white/20 mx-3 mt-0" />
+                  )}
+                  {unrankedRows.length > 0 && (
+                    <div className="px-3 py-1 text-[10px] text-muted text-center">
+                      Min. {MIN_MATCHES[period]} meczów do rankingu
+                    </div>
+                  )}
+
+                  {/* Unranked Rows */}
+                  {unrankedRows.map((r, idx) => (
+                    <motion.div
+                      key={r.player.id}
+                      variants={item}
+                      className={`grid grid-cols-[2rem_6rem_2.5rem_2.5rem_3rem_3.5rem_3rem_2.5rem] gap-1 items-center px-3 py-3 opacity-40 hover:bg-white/[0.02] transition-colors ${
+                        idx < unrankedRows.length - 1 ? "border-b border-white/5" : ""
+                      }`}
+                    >
+                      <span className="text-center font-mono font-bold text-sm text-muted">—</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <PlayerAvatar
+                          avatarUrl={r.player.avatarUrl}
+                          displayName={r.player.displayName}
+                          colorIndex={r.colorIndex}
+                          size="sm"
+                        />
+                        <span className="text-sm font-medium truncate text-foreground">{r.player.displayName}</span>
+                      </div>
+                      <span className="text-center font-mono text-sm text-muted">{r.stats.matchesPlayed}</span>
+                      <span className="text-center font-mono text-sm text-foreground">{r.stats.matchesWon}</span>
+                      <span className="text-center font-mono text-sm font-semibold text-foreground">
+                        {rankingMode === "points" ? r.points.toFixed(1) : rankingMode === "rating" ? r.rating.toFixed(2) : r.winPct.toFixed(0)}
+                      </span>
+                      <span className="text-center font-mono text-sm text-neon-blue">{r.threeDartAvg.toFixed(1)}</span>
+                      <span className="text-center font-mono text-sm text-neon-purple">{r.checkoutPct.toFixed(1)}</span>
+                      <span className="text-center font-mono text-sm text-neon-yellow">{r.stats.tonPlus + r.stats.oneEighties}</span>
+                    </motion.div>
+                  ))}
                 </div>
                 </div>
               </motion.div>

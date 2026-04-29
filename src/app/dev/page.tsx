@@ -12,9 +12,11 @@ import {
   exportAllData,
   importAllData,
   getMatches,
+  deleteMatch,
   getAppSetting,
   setAppSetting,
 } from "@/lib/store";
+import type { Match } from "@/types";
 
 const DEV_PASSWORD = "dart2024";
 
@@ -32,6 +34,8 @@ export default function DevPage() {
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [rankingMode, setRankingMode] = useState<"winpct" | "points" | "rating">("winpct");
+  const [allMatches, setAllMatches] = useState<Match[]>([]);
+  const [confirmDeleteMatchId, setConfirmDeleteMatchId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -41,6 +45,26 @@ export default function DevPage() {
     }
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (authenticated) {
+      getMatches().then((m) =>
+        setAllMatches(
+          m
+            .filter((x) => x.status === "completed")
+            .sort((a, b) => (b.completedAt ?? b.createdAt) - (a.completedAt ?? a.createdAt))
+        )
+      );
+    }
+  }, [authenticated]);
+
+  const handleDeleteMatch = async (id: string) => {
+    await deleteMatch(id);
+    await recalculateAllPlayerStats();
+    setAllMatches((prev) => prev.filter((m) => m.id !== id));
+    setConfirmDeleteMatchId(null);
+    showMessage("Mecz usunięty i statystyki przeliczone.");
+  };
 
   const showMessage = (text: string, type: "success" | "error" = "success") => {
     setMessage({ text, type });
@@ -397,6 +421,60 @@ export default function DevPage() {
                 Przelicz double
               </button>
             )}
+          </motion.div>
+
+          {/* Delete individual match */}
+          <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Trash2 size={18} className="text-neon-red" />
+              <h2 className="text-sm font-bold text-foreground">Usuń pojedynczy mecz</h2>
+            </div>
+            <p className="text-xs text-muted">
+              Usuwa wybrany mecz i przelicza statystyki wszystkich graczy.
+            </p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {allMatches.length === 0 && (
+                <p className="text-xs text-muted text-center py-2">Brak meczów</p>
+              )}
+              {allMatches.map((m) => {
+                const ts = m.completedAt ?? m.createdAt;
+                const dateStr = new Date(ts).toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" });
+                const timeStr = new Date(ts).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+                const winner = m.playerNames[m.playerIds.indexOf(m.winnerId ?? "")];
+                return (
+                  <div key={m.id} className="flex items-center justify-between gap-2 bg-surface rounded-xl px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-muted font-mono">{dateStr}, {timeStr}</p>
+                      <p className="text-xs text-foreground truncate">{m.playerNames.join(" vs ")}</p>
+                      {winner && <p className="text-[10px] text-neon-green">🏆 {winner}</p>}
+                    </div>
+                    {confirmDeleteMatchId === m.id ? (
+                      <div className="flex gap-1 shrink-0">
+                        <button
+                          onClick={() => handleDeleteMatch(m.id)}
+                          className="rounded-lg px-2 py-1 bg-neon-red/15 text-neon-red font-bold text-[10px] hover:bg-neon-red/25 transition-all"
+                        >
+                          Usuń
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteMatchId(null)}
+                          className="rounded-lg px-2 py-1 bg-surface-light text-muted font-bold text-[10px] hover:bg-surface-light transition-all"
+                        >
+                          Anuluj
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteMatchId(m.id)}
+                        className="shrink-0 p-1.5 rounded-lg hover:bg-neon-red/10 transition-all"
+                      >
+                        <Trash2 size={13} className="text-muted hover:text-neon-red" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </motion.div>
 
           {/* Clear all data */}

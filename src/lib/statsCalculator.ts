@@ -331,8 +331,8 @@ export function computePeriodTitles(
 
   return {
     weekly:  getPeriodMedals(weeks,  5),
-    monthly: getPeriodMedals(months, 10),
-    yearly:  getPeriodMedals(years,  20),
+    monthly: getPeriodMedals(months, 15),
+    yearly:  getPeriodMedals(years,  50),
   };
 }
 
@@ -345,7 +345,8 @@ export type AchievementKey =
   | "longestStreak"
   | "bestFirst9"
   | "bestAvg"
-  | "bestCheckoutPct";
+  | "bestCheckoutPct"
+  | "most26s";
 
 export interface AchievementEntry {
   leaderId: string | null;
@@ -353,15 +354,27 @@ export interface AchievementEntry {
   allRanked: { playerId: string; value: number }[];
 }
 
+/** Liczba tur gdzie turnTotal === 26 (nie bust) */
+export function computeMost26Count(matches: Match[], playerId: string): number {
+  let count = 0;
+  for (const m of matches) {
+    if (m.status !== "completed") continue;
+    for (const t of m.turns) {
+      if (t.playerId === playerId && t.turnTotal === 26 && !t.isBust) count++;
+    }
+  }
+  return count;
+}
+
 /** Compute all-time achievement leaders */
 export function computeAchievementLeaders(
   matches: Match[],
   players: Player[]
 ): Record<AchievementKey, AchievementEntry> {
-  function makeEntry(values: { playerId: string; value: number }[]): AchievementEntry {
+  function makeEntry(values: { playerId: string; value: number }[], minThreshold = 1): AchievementEntry {
     const sorted = [...values].sort((a, b) => b.value - a.value);
     const top = sorted[0]?.value ?? 0;
-    const leaderId = top > 0 ? (sorted[0]?.playerId ?? null) : null;
+    const leaderId = top >= minThreshold ? (sorted[0]?.playerId ?? null) : null;
     return { leaderId, value: top, allRanked: sorted };
   }
 
@@ -379,6 +392,7 @@ export function computeAchievementLeaders(
   const mostT20T19 = players.map((p) => ({ playerId: p.id, value: computeT20T19Count(matches, p.id) }));
   const longestStreak = players.map((p) => ({ playerId: p.id, value: computeWinStreak(matches, p.id) }));
   const bestFirst9 = players.map((p) => ({ playerId: p.id, value: computeBestFirst9Avg(matches, p.id) }));
+  const most26s = players.map((p) => ({ playerId: p.id, value: computeMost26Count(matches, p.id) }));
 
   return {
     mostMatches: makeEntry(mostMatches),
@@ -386,10 +400,11 @@ export function computeAchievementLeaders(
     mostTonPlus: makeEntry(mostTonPlus),
     most180s: makeEntry(most180s),
     mostT20T19: makeEntry(mostT20T19),
-    longestStreak: makeEntry(longestStreak),
+    longestStreak: makeEntry(longestStreak, 3),
     bestFirst9: makeEntry(bestFirst9),
     bestAvg: makeEntry(bestAvg),
     bestCheckoutPct: makeEntry(bestCheckoutPct),
+    most26s: makeEntry(most26s),
   };
 }
 

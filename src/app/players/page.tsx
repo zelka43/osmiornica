@@ -13,6 +13,7 @@ import {
   X,
   Crown,
   Star,
+  Hash,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/ui/NavBar";
@@ -83,6 +84,7 @@ const ACHIEVEMENT_META: Record<AchievementKey, { label: string; icon: React.Elem
   bestFirst9:      { label: "Najlepszy First 9",    icon: TrendingUp, color: "text-neon-blue",  unit: "" },
   bestAvg:         { label: "Najlepsza średnia",    icon: BarChart,  color: "text-neon-green",  unit: "" },
   bestCheckoutPct: { label: "Najlepszy CO%",        icon: Award,     color: "text-neon-purple", unit: "%" },
+  most26s:         { label: "Najwięcej 26",          icon: Hash,      color: "text-neon-blue",   unit: "" },
 };
 
 // Placeholder component used in ACHIEVEMENT_META (replaced below)
