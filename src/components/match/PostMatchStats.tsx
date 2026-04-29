@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Target, Zap } from "lucide-react";
+import { Trophy, Target, Zap, Shuffle } from "lucide-react";
 import { calculateThreeDartAvg, calculateCheckoutPercentage } from "@/lib/statsCalculator";
 import type { Match } from "@/types";
 import { PLAYER_COLORS } from "@/types";
@@ -11,6 +11,7 @@ interface PostMatchStatsProps {
   match: Match;
   allPlayerIds?: string[];
   onClose?: () => void;
+  onRematch?: () => void;
 }
 
 const item = {
@@ -18,7 +19,7 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
 
-export default function PostMatchStats({ match, allPlayerIds, onClose }: PostMatchStatsProps) {
+export default function PostMatchStats({ match, allPlayerIds, onClose, onRematch }: PostMatchStatsProps) {
   const playerStats = useMemo(() => {
     return match.playerIds.map((playerId, idx) => {
       const state = match.scores[playerId];
@@ -122,12 +123,21 @@ export default function PostMatchStats({ match, allPlayerIds, onClose }: PostMat
         );
       })}
 
-      {/* Close button */}
+      {/* Buttons */}
       {onClose && (
-        <motion.div variants={item}>
+        <motion.div variants={item} className="flex gap-2">
+          {onRematch && (
+            <button
+              onClick={onRematch}
+              className="flex-1 rounded-2xl p-4 glass border border-neon-blue/30 text-neon-blue font-bold hover:bg-neon-blue/10 transition-all flex items-center justify-center gap-2"
+            >
+              <Shuffle size={16} />
+              Rewanż
+            </button>
+          )}
           <button
             onClick={onClose}
-            className="w-full rounded-2xl p-4 bg-neon-green text-background font-bold glow-green hover:bg-neon-green-dim transition-all"
+            className={`${onRematch ? "flex-1" : "w-full"} rounded-2xl p-4 bg-neon-green text-background font-bold glow-green hover:bg-neon-green-dim transition-all`}
           >
             Zamknij
           </button>

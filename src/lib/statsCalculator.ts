@@ -2,6 +2,14 @@ import type { PlayerStats, PlayerMatchState, Match, Player } from "@/types";
 
 export type TimePeriod = "all" | "yearly" | "monthly" | "weekly" | "daily";
 
+export const MIN_MATCHES: Record<TimePeriod, number> = {
+  all: 25,
+  yearly: 50,
+  monthly: 10,
+  weekly: 5,
+  daily: 0,
+};
+
 export interface PeriodRange {
   label: string;
   start: number;
@@ -330,9 +338,9 @@ export function computePeriodTitles(
   }
 
   return {
-    weekly:  getPeriodMedals(weeks,  5),
-    monthly: getPeriodMedals(months, 15),
-    yearly:  getPeriodMedals(years,  50),
+    weekly:  getPeriodMedals(weeks,  MIN_MATCHES.weekly),
+    monthly: getPeriodMedals(months, MIN_MATCHES.monthly),
+    yearly:  getPeriodMedals(years,  MIN_MATCHES.yearly),
   };
 }
 

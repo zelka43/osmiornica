@@ -151,6 +151,26 @@ export default function PlayersPage() {
     return map;
   }, [rankedPlayers]);
 
+  // Ring always based on all-time win% — independent of current rankingMode
+  const allTimeRingMap = useMemo(() => {
+    const sorted = [...players]
+      .filter((p) => p.stats.matchesPlayed > 0)
+      .sort((a, b) => {
+        const wpA = a.stats.matchesWon / a.stats.matchesPlayed;
+        const wpB = b.stats.matchesWon / b.stats.matchesPlayed;
+        if (wpB !== wpA) return wpB - wpA;
+        const avgA = a.stats.totalDartsThrown > 0 ? (a.stats.totalPointsScored / a.stats.totalDartsThrown) * 3 : 0;
+        const avgB = b.stats.totalDartsThrown > 0 ? (b.stats.totalPointsScored / b.stats.totalDartsThrown) * 3 : 0;
+        if (avgB !== avgA) return avgB - avgA;
+        const coA = a.stats.doublesAttempted > 0 ? a.stats.doublesHit / a.stats.doublesAttempted : 0;
+        const coB = b.stats.doublesAttempted > 0 ? b.stats.doublesHit / b.stats.doublesAttempted : 0;
+        return coB - coA;
+      });
+    const map: Record<string, number> = {};
+    sorted.forEach((p, i) => { map[p.id] = i + 1; });
+    return map;
+  }, [players]);
+
   const selected = players.find((p) => p.id === selectedId) ?? null;
   const completedMatches = useMemo(() => matches.filter((m) => m.status === "completed"), [matches]);
 
@@ -247,7 +267,8 @@ export default function PlayersPage() {
 
   const colorIndex = selected ? players.findIndex((p) => p.id === selected.id) % PLAYER_COLORS.length : 0;
   const rank = selected ? (rankMap[selected.id] ?? null) : null;
-  const ringClass = rank && rank <= 3 ? RING_BY_RANK[rank] : "";
+  const allTimeRing = selected ? (allTimeRingMap[selected.id] ?? null) : null;
+  const ringClass = allTimeRing && allTimeRing <= 3 ? RING_BY_RANK[allTimeRing] : "";
   const avg = selected
     ? calculateThreeDartAvg(selected.stats.totalPointsScored, selected.stats.totalDartsThrown)
     : 0;
@@ -286,14 +307,14 @@ export default function PlayersPage() {
             )}
 
             {/* Rank badge */}
-            {rank && (
+            {allTimeRing && (
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                rank === 1 ? "bg-yellow-400/15 text-yellow-400" :
-                rank === 2 ? "bg-gray-300/15 text-gray-300" :
-                rank === 3 ? "bg-amber-600/15 text-amber-500" :
+                allTimeRing === 1 ? "bg-yellow-400/15 text-yellow-400" :
+                allTimeRing === 2 ? "bg-gray-300/15 text-gray-300" :
+                allTimeRing === 3 ? "bg-amber-600/15 text-amber-500" :
                 "bg-surface text-muted"
               }`}>
-                #{rank} all-time
+                #{allTimeRing} all-time
               </span>
             )}
 

@@ -11,6 +11,7 @@ import {
   calculateCheckoutPercentage,
   calculateStatsForRange,
   getPeriodRange,
+  MIN_MATCHES,
   type TimePeriod,
 } from "@/lib/statsCalculator";
 import type { Player, Match, PlayerStats } from "@/types";
@@ -35,14 +36,6 @@ const PERIOD_LABELS: Record<TimePeriod, string> = {
   monthly: "Miesiąc",
   weekly: "Tydzień",
   daily: "Dzień",
-};
-
-const MIN_MATCHES: Record<TimePeriod, number> = {
-  all: 25,
-  yearly: 50,
-  monthly: 15,
-  weekly: 5,
-  daily: 0,
 };
 
 interface RankedPlayer {

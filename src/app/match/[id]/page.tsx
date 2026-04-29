@@ -474,6 +474,47 @@ export default function MatchPage({
     }
   };
 
+  const handleRematch = async () => {
+    if (!match) return;
+    const ids = [...match.playerIds];
+    const names = [...match.playerNames];
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      [names[i], names[j]] = [names[j], names[i]];
+    }
+    const scores: Match["scores"] = {};
+    for (const pid of ids) {
+      scores[pid] = {
+        remaining: match.startingScore,
+        dartsThrown: 0,
+        doublesAttempted: 0,
+        doublesHit: 0,
+        pointsScored: 0,
+        oneEighties: 0,
+        tonPlus: 0,
+      };
+    }
+    const newMatch: Match = {
+      id: uuidv4(),
+      gameMode: match.gameMode,
+      startingScore: match.startingScore,
+      playerIds: ids,
+      playerNames: names,
+      status: "active",
+      currentPlayerIndex: 0,
+      scores,
+      winnerId: null,
+      winnerName: null,
+      createdAt: Date.now(),
+      completedAt: null,
+      turns: [],
+    };
+    await saveMatch(newMatch);
+    await setActiveMatch(newMatch);
+    router.push(`/match/${newMatch.id}`);
+  };
+
   const undoLastTurn = async () => {
     if (!match || match.turns.length === 0 || match.status === "completed") return;
 
@@ -991,6 +1032,7 @@ export default function MatchPage({
               <PostMatchStats
                 match={match}
                 onClose={() => setShowWinModal(false)}
+                onRematch={handleRematch}
               />
             </motion.div>
           </motion.div>
