@@ -326,7 +326,7 @@ export default function PlayersPage() {
                 className="w-full appearance-none bg-surface border border-white/10 rounded-xl px-4 py-3 pr-8 text-sm text-foreground focus:outline-none focus:border-neon-green/30"
               >
                 {players.map((p) => {
-                  const r = rankMap[p.id];
+                  const r = allTimeRingMap[p.id];
                   const medal = r === 1 ? "🥇 " : r === 2 ? "🥈 " : r === 3 ? "🥉 " : "";
                   return (
                     <option key={p.id} value={p.id}>
