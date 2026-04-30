@@ -1,5 +1,9 @@
 import type { PlayerStats, PlayerMatchState, Match, Player } from "@/types";
 
+function rankOnly(matches: Match[]): Match[] {
+  return matches.filter((m) => (m.matchType ?? "ranked") !== "friendly");
+}
+
 export type TimePeriod = "all" | "yearly" | "monthly" | "weekly" | "daily";
 
 export const MIN_MATCHES: Record<TimePeriod, number> = {
@@ -96,7 +100,7 @@ export function calculateStatsForRange(
   matches: Match[],
   range: PeriodRange
 ): PlayerStats {
-  const filtered = matches.filter(
+  const filtered = rankOnly(matches).filter(
     (m) =>
       m.status === "completed" &&
       m.playerIds.includes(playerId) &&
@@ -172,7 +176,7 @@ export function calculateCheckoutPercentage(
 /** T20 + T19 throws counted from darts array (detailed mode only) */
 export function computeT20T19Count(matches: Match[], playerId: string): number {
   let count = 0;
-  for (const m of matches) {
+  for (const m of rankOnly(matches)) {
     if (m.status !== "completed") continue;
     for (const t of m.turns) {
       if (t.playerId !== playerId || t.darts.length === 0) continue;
@@ -187,7 +191,7 @@ export function computeT20T19Count(matches: Match[], playerId: string): number {
 /** Most frequently hit finishing double (detailed mode only). Returns e.g. "D16", "Bull" or null */
 export function computeFavoriteDouble(matches: Match[], playerId: string): string | null {
   const freq: Record<string, number> = {};
-  for (const m of matches) {
+  for (const m of rankOnly(matches)) {
     if (m.status !== "completed") continue;
     for (const t of m.turns) {
       if (t.playerId !== playerId || t.darts.length === 0 || !t.isCheckout) continue;
@@ -210,7 +214,7 @@ export function computeHighestCheckout(
 ): { value: number; count: number } {
   let highest = 0;
   let count = 0;
-  for (const m of matches) {
+  for (const m of rankOnly(matches)) {
     if (m.status !== "completed" || m.winnerId !== playerId) continue;
     const checkoutTurn = m.turns.find((t) => t.playerId === playerId && t.isCheckout);
     if (!checkoutTurn) continue;
@@ -223,7 +227,7 @@ export function computeHighestCheckout(
 
 /** Longest all-time win streak */
 export function computeWinStreak(matches: Match[], playerId: string): number {
-  const completed = matches
+  const completed = rankOnly(matches)
     .filter((m) => m.status === "completed" && m.playerIds.includes(playerId))
     .sort((a, b) => a.createdAt - b.createdAt);
   let max = 0;
@@ -238,7 +242,7 @@ export function computeWinStreak(matches: Match[], playerId: string): number {
 /** Average first-9 average across all matches (for stat tile) */
 export function computeAvgFirst9Avg(matches: Match[], playerId: string): number {
   const avgs: number[] = [];
-  for (const m of matches) {
+  for (const m of rankOnly(matches)) {
     if (m.status !== "completed") continue;
     const playerTurns = m.turns.filter((t) => t.playerId === playerId).slice(0, 3);
     if (playerTurns.length === 0) continue;
@@ -253,7 +257,7 @@ export function computeAvgFirst9Avg(matches: Match[], playerId: string): number 
 /** Best first-9 average (first 3 turns) across all matches */
 export function computeBestFirst9Avg(matches: Match[], playerId: string): number {
   let best = 0;
-  for (const m of matches) {
+  for (const m of rankOnly(matches)) {
     if (m.status !== "completed") continue;
     const playerTurns = m.turns.filter((t) => t.playerId === playerId).slice(0, 3);
     if (playerTurns.length === 0) continue;
@@ -276,7 +280,7 @@ export function computePeriodTitles(
   allPlayerIds: string[]
 ): { weekly: PeriodMedals; monthly: PeriodMedals; yearly: PeriodMedals } {
   const empty: PeriodMedals = { gold: 0, silver: 0, bronze: 0 };
-  const completed = matches.filter((m) => m.status === "completed");
+  const completed = rankOnly(matches).filter((m) => m.status === "completed");
   if (completed.length === 0) return { weekly: { ...empty }, monthly: { ...empty }, yearly: { ...empty } };
 
   const earliest = Math.min(...completed.map((m) => m.createdAt));
@@ -365,7 +369,7 @@ export interface AchievementEntry {
 /** Liczba tur gdzie turnTotal === 26 (nie bust) */
 export function computeMost26Count(matches: Match[], playerId: string): number {
   let count = 0;
-  for (const m of matches) {
+  for (const m of rankOnly(matches)) {
     if (m.status !== "completed") continue;
     for (const t of m.turns) {
       if (t.playerId === playerId && t.turnTotal === 26 && !t.isBust) count++;

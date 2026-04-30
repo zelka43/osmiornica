@@ -34,6 +34,8 @@ export const emptyStats: PlayerStats = {
 
 export type GameMode = "501" | "301";
 
+export type MatchType = "ranked" | "friendly";
+
 export interface PlayerMatchState {
   remaining: number;
   dartsThrown: number;
@@ -76,6 +78,7 @@ export interface Match {
   createdAt: number;
   completedAt: number | null;
   turns: Turn[];
+  matchType: MatchType;
 }
 
 export interface H2HRecord {

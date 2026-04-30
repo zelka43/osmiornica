@@ -449,9 +449,12 @@ export default function MatchPage({
   };
 
   const finalizeMatch = async (completedMatch: Match) => {
+    if (completedMatch.matchType === "friendly") return;
+
     const allPlayers = await getPlayers();
 
     for (const playerId of completedMatch.playerIds) {
+      if (playerId.startsWith("guest_")) continue;
       const player = allPlayers.find((p) => p.id === playerId);
       if (!player) continue;
 
@@ -467,8 +470,11 @@ export default function MatchPage({
 
       await updatePlayer({ ...player, stats: updatedStats });
 
-      // Update H2H for winner vs each other player
-      if (completedMatch.winnerId && playerId !== completedMatch.winnerId) {
+      if (
+        completedMatch.winnerId &&
+        playerId !== completedMatch.winnerId &&
+        !completedMatch.winnerId.startsWith("guest_")
+      ) {
         await updateH2H(completedMatch.winnerId, playerId);
       }
     }
@@ -509,6 +515,7 @@ export default function MatchPage({
       createdAt: Date.now(),
       completedAt: null,
       turns: [],
+      matchType: match.matchType,
     };
     await saveMatch(newMatch);
     await setActiveMatch(newMatch);

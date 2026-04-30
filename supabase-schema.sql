@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS matches (
   winner_name TEXT,
   created_at BIGINT NOT NULL,
   completed_at BIGINT,
-  turns JSONB NOT NULL DEFAULT '[]'::jsonb
+  turns JSONB NOT NULL DEFAULT '[]'::jsonb,
+  match_type TEXT NOT NULL DEFAULT 'ranked'
 );
 
 CREATE TABLE IF NOT EXISTS h2h_records (

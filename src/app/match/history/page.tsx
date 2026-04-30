@@ -151,9 +151,16 @@ export default function MatchHistoryPage() {
                       <span className="text-xs text-muted font-mono">
                         {formatDate(dateTs)}, {formatTime(dateTs)}
                       </span>
-                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-light text-neon-blue border border-neon-blue/20">
-                        {match.gameMode}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {(match.matchType ?? "ranked") === "friendly" && (
+                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-light text-neon-purple border border-neon-purple/20">
+                            Towarzyski
+                          </span>
+                        )}
+                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-light text-neon-blue border border-neon-blue/20">
+                          {match.gameMode}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Players and Scores */}

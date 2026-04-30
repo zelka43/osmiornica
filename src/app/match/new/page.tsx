@@ -1,326 +1,162 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Target, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Target,
+  Trophy,
+  Dumbbell,
+  ChevronRight,
+  ChevronDown,
+  Users,
+  Shuffle,
+  CircleDot,
+  BarChart2,
+} from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
-import PlayerAvatar from "@/components/ui/PlayerAvatar";
-import { getPlayers } from "@/lib/store";
-import { Player, GameMode, PLAYER_COLORS } from "@/types";
-import { v4 as uuidv4 } from "uuid";
-import { createInitialMatchState } from "@/lib/dartLogic";
-import { setActiveMatch, saveMatch } from "@/lib/store";
-import type { Match } from "@/types";
 
-type OrderMode = "ranking" | "manual" | "random";
-
-export default function NewMatchPage() {
+export default function NewGamePage() {
   const router = useRouter();
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [gameMode, setGameMode] = useState<GameMode>("501");
-  const [orderMode, setOrderMode] = useState<OrderMode>("ranking");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    async function load() {
-      setPlayers(await getPlayers());
-      try {
-        const savedOrder = localStorage.getItem("dart_player_order_mode");
-        if (savedOrder === "ranking" || savedOrder === "manual" || savedOrder === "random") {
-          setOrderMode(savedOrder);
-        }
-      } catch {}
-      setMounted(true);
-    }
-    load();
-  }, []);
-
-  const sortByRanking = useCallback(
-    (ids: string[]): string[] => {
-      return [...ids].sort((a, b) => {
-        const pa = players.find((p) => p.id === a);
-        const pb = players.find((p) => p.id === b);
-        const winPctA =
-          pa && pa.stats.matchesPlayed > 0
-            ? (pa.stats.matchesWon / pa.stats.matchesPlayed) * 100
-            : 0;
-        const winPctB =
-          pb && pb.stats.matchesPlayed > 0
-            ? (pb.stats.matchesWon / pb.stats.matchesPlayed) * 100
-            : 0;
-        return winPctA - winPctB; // ascending = worst first
-      });
-    },
-    [players]
-  );
-
-  const togglePlayer = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id];
-      if (orderMode === "ranking") {
-        return sortByRanking(next);
-      }
-      return next;
-    });
-  };
-
-  const shuffleOrder = () => {
-    setSelectedIds((prev) => {
-      const shuffled = [...prev];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
-    });
-  };
-
-  const handleOrderModeChange = (mode: OrderMode) => {
-    setOrderMode(mode);
-    try {
-      localStorage.setItem("dart_player_order_mode", mode);
-    } catch {}
-    if (mode === "random") shuffleOrder();
-    if (mode === "ranking") setSelectedIds((prev) => sortByRanking(prev));
-  };
-
-  const startMatch = async () => {
-    if (selectedIds.length < 2) return;
-
-    const startingScore = parseInt(gameMode);
-    const selectedPlayers = selectedIds
-      .map((id) => players.find((p) => p.id === id)!)
-      .filter(Boolean);
-
-    const scores: Record<string, ReturnType<typeof createInitialMatchState>> = {};
-    selectedPlayers.forEach((p) => {
-      scores[p.id] = createInitialMatchState(startingScore);
-    });
-
-    const match: Match = {
-      id: uuidv4(),
-      gameMode,
-      startingScore,
-      playerIds: selectedPlayers.map((p) => p.id),
-      playerNames: selectedPlayers.map((p) => p.displayName),
-      status: "active",
-      currentPlayerIndex: 0,
-      scores,
-      winnerId: null,
-      winnerName: null,
-      createdAt: Date.now(),
-      completedAt: null,
-      turns: [],
-    };
-
-    await saveMatch(match);
-    await setActiveMatch(match);
-    router.push(`/match/${match.id}`);
-  };
-
-  if (!mounted) {
-    return (
-      <div className="flex flex-col min-h-[100dvh]">
-        <main className="flex-1 px-4 pt-6 pb-24">
-          <div className="skeleton h-8 w-48 mb-6" />
-          <div className="skeleton h-20 w-full mb-4" />
-          <div className="skeleton h-20 w-full mb-4" />
-        </main>
-        <NavBar />
-      </div>
-    );
-  }
+  const [trainingOpen, setTrainingOpen] = useState(false);
 
   return (
     <div className="flex flex-col min-h-[100dvh]">
       <main className="flex-1 overflow-y-auto px-4 pt-6 pb-24">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           {/* Header */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-neon-green/10 flex items-center justify-center">
               <Target className="text-neon-green" size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Nowy mecz</h1>
-              <p className="text-sm text-muted">Wybierz graczy i tryb gry</p>
+              <h1 className="text-xl font-bold">Nowa gra</h1>
+              <p className="text-sm text-muted">Wybierz tryb rozgrywki</p>
             </div>
           </div>
 
-          {/* Game Mode */}
-          <div className="mb-6">
-            <h2 className="text-sm font-medium text-muted mb-3 uppercase tracking-wider">
-              Tryb gry
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {(["501", "301"] as GameMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setGameMode(mode)}
-                  className={`relative rounded-2xl p-4 text-center transition-all duration-200 ${
-                    gameMode === mode
-                      ? "glass glow-green border border-neon-green/30"
-                      : "glass border border-transparent hover:border-border-bright"
-                  }`}
-                >
-                  <span
-                    className={`font-mono text-3xl font-bold ${
-                      gameMode === mode ? "text-neon-green text-glow-green" : "text-foreground"
-                    }`}
-                  >
-                    {mode}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Player Selection */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-                Gracze ({selectedIds.length} wybranych)
-              </h2>
-              {selectedIds.length > 1 && (
-                <div className="flex gap-1 p-0.5 bg-surface rounded-lg">
-                  {([
-                    { mode: "ranking" as OrderMode, label: "Ranking" },
-                    { mode: "manual" as OrderMode, label: "Ręczna" },
-                    { mode: "random" as OrderMode, label: "Losowa" },
-                  ]).map(({ mode, label }) => (
-                    <button
-                      key={mode}
-                      onClick={() => handleOrderModeChange(mode)}
-                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
-                        orderMode === mode
-                          ? "bg-neon-blue/15 text-neon-blue"
-                          : "text-muted"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {players.length === 0 ? (
-              <div className="glass rounded-2xl p-8 text-center">
-                <p className="text-muted mb-2">Brak graczy</p>
-                <button
-                  onClick={() => router.push("/players/manage")}
-                  className="text-neon-green text-sm hover:underline"
-                >
-                  Dodaj graczy →
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {players.map((player, index) => {
-                  const isSelected = selectedIds.includes(player.id);
-                  const orderIndex = selectedIds.indexOf(player.id);
-
-                  return (
-                    <motion.button
-                      key={player.id}
-                      onClick={() => togglePlayer(player.id)}
-                      whileTap={{ scale: 0.98 }}
-                      className={`w-full flex items-center gap-3 rounded-2xl p-3 transition-all duration-200 ${
-                        isSelected
-                          ? "glass glow-green border border-neon-green/20"
-                          : "glass border border-transparent hover:border-border-bright"
-                      }`}
-                    >
-                      {/* Avatar */}
-                      <PlayerAvatar
-                        avatarUrl={player.avatarUrl}
-                        displayName={player.displayName}
-                        colorIndex={index}
-                        size="md"
-                      />
-
-                      {/* Name */}
-                      <span className="flex-1 text-left font-medium">
-                        {player.displayName}
-                      </span>
-
-                      {/* Order number */}
-                      {isSelected && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-7 h-7 rounded-full bg-neon-green flex items-center justify-center"
-                        >
-                          <span className="text-background font-bold text-xs">
-                            {orderIndex + 1}
-                          </span>
-                        </motion.div>
-                      )}
-                    </motion.button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Selected order */}
-          {selectedIds.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="mb-6"
-            >
-              <h2 className="text-sm font-medium text-muted mb-2 uppercase tracking-wider">
-                Kolejność gry
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {selectedIds.map((id, i) => {
-                  const p = players.find((pl) => pl.id === id);
-                  if (!p) return null;
-                  return (
-                    <span
-                      key={id}
-                      className="glass-light rounded-full px-3 py-1.5 text-sm flex items-center gap-1.5"
-                    >
-                      <span className="text-neon-green font-mono text-xs">
-                        {i + 1}.
-                      </span>
-                      {p.displayName}
-                    </span>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Start button */}
+          {/* Mecz */}
+          <p className="text-xs font-bold text-muted uppercase tracking-widest mb-3">Mecz</p>
           <motion.button
-            onClick={startMatch}
-            disabled={selectedIds.length < 2}
-            whileTap={selectedIds.length >= 2 ? { scale: 0.97 } : undefined}
-            className={`w-full rounded-2xl p-4 flex items-center justify-center gap-2 font-bold text-lg transition-all duration-200 ${
-              selectedIds.length >= 2
-                ? "bg-neon-green text-background glow-green hover:bg-neon-green-dim active:bg-neon-green-dim"
-                : "bg-surface text-muted cursor-not-allowed"
-            }`}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push("/match/new/ranked")}
+            className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-4 flex items-center gap-4 mb-8 transition-all duration-200"
           >
-            <Target size={22} />
-            Rozpocznij mecz
-            <ChevronRight size={20} />
+            <div className="w-11 h-11 rounded-xl bg-neon-green/10 flex items-center justify-center shrink-0">
+              <Trophy className="text-neon-green" size={22} />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-bold text-base">Mecz rankingowy</p>
+              <p className="text-sm text-muted">501 / 301 · liczy się do statystyk</p>
+            </div>
+            <ChevronRight size={18} className="text-muted" />
           </motion.button>
 
-          {selectedIds.length < 2 && (
-            <p className="text-center text-muted text-sm mt-3">
-              Wybierz minimum 2 graczy
-            </p>
-          )}
+          {/* Tryb treningowy */}
+          <p className="text-xs font-bold text-muted uppercase tracking-widest mb-3">Tryb treningowy</p>
+
+          <button
+            onClick={() => setTrainingOpen((o) => !o)}
+            className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-4 flex items-center gap-4 transition-all duration-200"
+          >
+            <div className="w-11 h-11 rounded-xl bg-neon-blue/10 flex items-center justify-center shrink-0">
+              <Dumbbell className="text-neon-blue" size={22} />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-bold text-base">Tryb treningowy</p>
+              <p className="text-sm text-muted">Nie liczy się do rankingu</p>
+            </div>
+            <motion.div
+              animate={{ rotate: trainingOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown size={18} className="text-muted" />
+            </motion.div>
+          </button>
+
+          <AnimatePresence>
+            {trainingOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-2 space-y-2">
+                  <TrainingCard
+                    icon={<Users size={20} className="text-neon-purple" />}
+                    iconBg="bg-neon-purple/10"
+                    label="Gra towarzyska"
+                    desc="501 / 301 · można dodać gości"
+                    onClick={() => router.push("/match/new/friendly")}
+                  />
+                  <TrainingCard
+                    icon={<Shuffle size={20} className="text-neon-yellow" />}
+                    iconBg="bg-neon-yellow/10"
+                    label="Losowy checkout"
+                    desc="Trening finiszowania"
+                    onClick={() => router.push("/training/checkout")}
+                  />
+                  <TrainingCard
+                    icon={<CircleDot size={20} className="text-neon-green" />}
+                    iconBg="bg-neon-green/10"
+                    label="Trening doubli"
+                    desc="D1–D20 + Bull"
+                    onClick={() => router.push("/training/doubles")}
+                  />
+                  <TrainingCard
+                    icon={<CircleDot size={20} className="text-neon-blue" />}
+                    iconBg="bg-neon-blue/10"
+                    label="Trening trójek"
+                    desc="T1–T20"
+                    onClick={() => router.push("/training/triples")}
+                  />
+                  <TrainingCard
+                    icon={<BarChart2 size={20} className="text-neon-red" />}
+                    iconBg="bg-neon-red/10"
+                    label="Trening punktowy"
+                    desc="10 lub 20 rund"
+                    onClick={() => router.push("/training/points")}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </main>
       <NavBar />
     </div>
+  );
+}
+
+function TrainingCard({
+  icon,
+  iconBg,
+  label,
+  desc,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  label: string;
+  desc: string;
+  onClick: () => void;
+}) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-200"
+    >
+      <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
+        {icon}
+      </div>
+      <div className="flex-1 text-left">
+        <p className="font-semibold text-sm">{label}</p>
+        <p className="text-xs text-muted">{desc}</p>
+      </div>
+      <ChevronRight size={16} className="text-muted" />
+    </motion.button>
   );
 }

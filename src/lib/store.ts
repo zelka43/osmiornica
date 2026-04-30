@@ -151,7 +151,7 @@ export async function getMatchesBetweenPlayers(
     console.error("getMatchesBetweenPlayers error:", error);
     return [];
   }
-  return (data ?? []).map(mapMatch);
+  return (data ?? []).map(mapMatch).filter((m) => (m.matchType ?? "ranked") !== "friendly");
 }
 
 export async function updateH2H(
@@ -214,7 +214,9 @@ export async function deleteMatchesSince(sinceTimestamp: number): Promise<void> 
 
 export async function recalculateAllPlayerStats(): Promise<void> {
   const players = await getPlayers();
-  const matches = (await getMatches()).filter((m) => m.status === "completed");
+  const matches = (await getMatches()).filter(
+    (m) => m.status === "completed" && (m.matchType ?? "ranked") !== "friendly"
+  );
 
   for (const player of players) {
     const stats: PlayerStats = { ...emptyStats };
@@ -503,6 +505,7 @@ function mapMatch(row: any): Match {
     createdAt: row.created_at,
     completedAt: row.completed_at,
     turns: row.turns ?? [],
+    matchType: row.match_type ?? "ranked",
   };
 }
 
@@ -521,6 +524,7 @@ function toMatchRow(match: Match) {
     created_at: match.createdAt,
     completed_at: match.completedAt,
     turns: match.turns,
+    match_type: match.matchType,
   };
 }
 

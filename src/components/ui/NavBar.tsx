@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 
 const tabs = [
   { label: "Start", icon: Home, href: "/" },
-  { label: "Nowy mecz", icon: Target, href: "/match/new" },
+  { label: "Nowa gra", icon: Target, href: "/match/new" },
   { label: "Historia", icon: History, href: "/match/history" },
   { label: "Statystyki", icon: BarChart3, href: "/stats" },
   { label: "H2H", icon: Swords, href: "/stats/h2h" },
@@ -40,7 +40,7 @@ export default function NavBar() {
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     if (href === "/stats") return pathname === "/stats";
-    if (href === "/match/new") return pathname === "/match/new";
+    if (href === "/match/new") return pathname.startsWith("/match/new") || pathname.startsWith("/training");
     if (href === "/players") return pathname === "/players";
     return pathname.startsWith(href);
   };
