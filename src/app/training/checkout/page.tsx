@@ -3,16 +3,19 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shuffle, ChevronLeft, RotateCcw, Check, X } from "lucide-react";
+import { Shuffle, ChevronLeft, RotateCcw } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
 import { CHECKOUTS } from "@/lib/checkouts";
 
 type SelectMode = "random" | "custom" | "random100plus" | "randomBelow100";
 type Phase = "setup" | "playing";
+type TurnResult = "checkout" | "bust" | null;
 
 const VALID_TARGETS = Object.keys(CHECKOUTS).map(Number);
 const TARGETS_100PLUS = VALID_TARGETS.filter((n) => n >= 100);
 const TARGETS_BELOW100 = VALID_TARGETS.filter((n) => n < 100);
+
+const QUICK_SCORES = [0, 26, 41, 45, 60, 85, 100, 140, 180];
 
 function pickRandom(pool: number[]): number {
   return pool[Math.floor(Math.random() * pool.length)];
@@ -25,18 +28,28 @@ export default function CheckoutTrainingPage() {
   const [customInput, setCustomInput] = useState("");
   const [customError, setCustomError] = useState("");
 
-  const [target, setTarget] = useState<number | null>(null);
+  // Playing state
+  const [target, setTarget] = useState(0);
+  const [remaining, setRemaining] = useState(0);
+  const [inputValue, setInputValue] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [successes, setSuccesses] = useState(0);
-  const [lastResult, setLastResult] = useState<"hit" | "miss" | null>(null);
+  const [turnResult, setTurnResult] = useState<TurnResult>(null);
+  const [roundScores, setRoundScores] = useState<number[]>([]);
 
-  const nextTarget = useCallback(() => {
-    setLastResult(null);
-    if (selectMode === "random") return pickRandom(VALID_TARGETS);
-    if (selectMode === "random100plus") return pickRandom(TARGETS_100PLUS);
-    if (selectMode === "randomBelow100") return pickRandom(TARGETS_BELOW100);
-    return parseInt(customInput);
-  }, [selectMode, customInput]);
+  const getPool = useCallback(() => {
+    if (selectMode === "random100plus") return TARGETS_100PLUS;
+    if (selectMode === "randomBelow100") return TARGETS_BELOW100;
+    return VALID_TARGETS;
+  }, [selectMode]);
+
+  const startWithTarget = (t: number) => {
+    setTarget(t);
+    setRemaining(t);
+    setInputValue("");
+    setTurnResult(null);
+    setRoundScores([]);
+  };
 
   const start = () => {
     if (selectMode === "custom") {
@@ -45,40 +58,70 @@ export default function CheckoutTrainingPage() {
         setCustomError("Niedostępny checkout");
         return;
       }
+      setAttempts(0);
+      setSuccesses(0);
+      setPhase("playing");
+      startWithTarget(val);
+      return;
     }
     setAttempts(0);
     setSuccesses(0);
-    setLastResult(null);
-    setTarget(nextTarget());
     setPhase("playing");
+    startWithTarget(pickRandom(getPool()));
   };
 
-  const record = (hit: boolean) => {
-    setAttempts((a) => a + 1);
-    if (hit) setSuccesses((s) => s + 1);
-    setLastResult(hit ? "hit" : "miss");
+  const handleKey = (key: string) => {
+    if (key === "DEL") {
+      setInputValue((v) => v.slice(0, -1));
+      return;
+    }
+    const next = inputValue + key;
+    const val = parseInt(next);
+    if (val > Math.min(180, remaining)) return;
+    setInputValue(next);
   };
 
-  const next = () => {
-    setLastResult(null);
-    if (selectMode === "custom") return; // custom: same target
-    const pool =
-      selectMode === "random100plus" ? TARGETS_100PLUS
-      : selectMode === "randomBelow100" ? TARGETS_BELOW100
-      : VALID_TARGETS;
-    setTarget(pickRandom(pool));
+  const confirmScore = () => {
+    const score = parseInt(inputValue || "0");
+    if (isNaN(score) || score < 0) return;
+
+    const newRemaining = remaining - score;
+    setRoundScores((prev) => [...prev, score]);
+    setInputValue("");
+
+    if (newRemaining < 0 || newRemaining === 1) {
+      setAttempts((a) => a + 1);
+      setTurnResult("bust");
+    } else if (newRemaining === 0) {
+      setAttempts((a) => a + 1);
+      setSuccesses((s) => s + 1);
+      setTurnResult("checkout");
+    } else {
+      setRemaining(newRemaining);
+    }
+  };
+
+  const retry = () => {
+    startWithTarget(target);
+  };
+
+  const nextTarget = () => {
+    if (selectMode === "custom") {
+      startWithTarget(target);
+    } else {
+      startWithTarget(pickRandom(getPool()));
+    }
   };
 
   const reset = () => {
     setPhase("setup");
-    setTarget(null);
     setAttempts(0);
     setSuccesses(0);
-    setLastResult(null);
+    setTurnResult(null);
   };
 
-  const hint = target ? CHECKOUTS[target] : null;
   const successRate = attempts > 0 ? Math.round((successes / attempts) * 100) : 0;
+  const hint = CHECKOUTS[remaining] ?? null;
 
   return (
     <div className="flex flex-col min-h-[100dvh]">
@@ -147,13 +190,9 @@ export default function CheckoutTrainingPage() {
                       placeholder="Wpisz liczbę (np. 121)"
                       className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none border border-transparent focus:border-border-bright transition-colors font-mono"
                     />
-                    {customError && (
-                      <p className="text-neon-red text-xs mt-1">{customError}</p>
-                    )}
+                    {customError && <p className="text-neon-red text-xs mt-1">{customError}</p>}
                     {customInput && CHECKOUTS[parseInt(customInput)] && (
-                      <p className="text-neon-green text-xs mt-1 font-mono">
-                        ✓ {CHECKOUTS[parseInt(customInput)]}
-                      </p>
+                      <p className="text-neon-green text-xs mt-1 font-mono">✓ {CHECKOUTS[parseInt(customInput)]}</p>
                     )}
                   </motion.div>
                 )}
@@ -167,10 +206,10 @@ export default function CheckoutTrainingPage() {
               </motion.div>
             )}
 
-            {phase === "playing" && target !== null && (
-              <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            {phase === "playing" && (
+              <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-2 mb-6">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   <div className="glass rounded-2xl p-3 text-center">
                     <p className="text-[10px] text-muted mb-1">Próby</p>
                     <p className="font-mono text-xl font-bold">{attempts}</p>
@@ -180,81 +219,128 @@ export default function CheckoutTrainingPage() {
                     <p className="font-mono text-xl font-bold text-neon-green">{successes}</p>
                   </div>
                   <div className="glass rounded-2xl p-3 text-center">
-                    <p className="text-[10px] text-muted mb-1">Skuteczność</p>
+                    <p className="text-[10px] text-muted mb-1">Skutecz.</p>
                     <p className="font-mono text-xl font-bold text-neon-blue">{successRate}%</p>
                   </div>
                 </div>
 
-                {/* Target */}
-                <div className="glass rounded-2xl p-8 text-center mb-4">
-                  <p className="text-xs text-muted mb-2 uppercase tracking-widest">Checkout</p>
+                {/* Remaining */}
+                <div className={`glass rounded-2xl p-6 text-center mb-2 transition-all ${
+                  turnResult === "checkout" ? "border border-neon-green/50 bg-neon-green/5" :
+                  turnResult === "bust" ? "border border-neon-red/50 bg-neon-red/5" :
+                  "border border-transparent"
+                }`}>
+                  <p className="text-xs text-muted mb-1 uppercase tracking-widest">Pozostało</p>
                   <AnimatePresence mode="wait">
                     <motion.p
-                      key={target}
-                      initial={{ scale: 0.8, opacity: 0 }}
+                      key={remaining}
+                      initial={{ scale: 0.85, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 1.2, opacity: 0 }}
-                      className="font-mono text-7xl font-bold text-neon-yellow"
-                    >
-                      {target}
-                    </motion.p>
-                  </AnimatePresence>
-                  {hint && (
-                    <p className="text-sm text-muted mt-3 font-mono">{hint}</p>
-                  )}
-                </div>
-
-                {/* Last result feedback */}
-                <AnimatePresence>
-                  {lastResult && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className={`rounded-2xl p-3 text-center mb-4 ${
-                        lastResult === "hit" ? "bg-neon-green/10 border border-neon-green/30" : "bg-neon-red/10 border border-neon-red/30"
+                      className={`font-mono text-7xl font-bold ${
+                        turnResult === "checkout" ? "text-neon-green text-glow-green" :
+                        turnResult === "bust" ? "text-neon-red" :
+                        "text-foreground"
                       }`}
                     >
-                      <p className={`font-bold ${lastResult === "hit" ? "text-neon-green" : "text-neon-red"}`}>
-                        {lastResult === "hit" ? "✓ Checkout!" : "✗ Pudło"}
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      {turnResult === "checkout" ? "✓" : turnResult === "bust" ? "BUST" : remaining}
+                    </motion.p>
+                  </AnimatePresence>
 
-                {/* Hit / Miss */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <button
-                    onClick={() => record(false)}
-                    className="rounded-2xl p-5 glass border border-neon-red/30 text-neon-red font-bold text-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
-                  >
-                    <X size={22} /> Pudło
-                  </button>
-                  <button
-                    onClick={() => record(true)}
-                    className="rounded-2xl p-5 glass border border-neon-green/30 text-neon-green font-bold text-xl flex items-center justify-center gap-2 active:scale-95 transition-all glow-green"
-                  >
-                    <Check size={22} /> Checkout!
-                  </button>
+                  {/* Hint */}
+                  {!turnResult && hint && (
+                    <p className="text-sm text-neon-yellow font-mono mt-2">{hint}</p>
+                  )}
+                  {turnResult === "checkout" && (
+                    <p className="text-neon-green font-bold mt-1">Checkout!</p>
+                  )}
+                  {turnResult === "bust" && (
+                    <p className="text-neon-red font-bold mt-1">Pudło / Bust</p>
+                  )}
                 </div>
 
-                {/* Next / Reset row */}
-                <div className="grid grid-cols-2 gap-3">
-                  {selectMode !== "custom" && (
+                {/* Round scores */}
+                {roundScores.length > 0 && !turnResult && (
+                  <div className="flex gap-2 mb-3 flex-wrap">
+                    {roundScores.map((s, i) => (
+                      <span key={i} className="glass-light rounded-lg px-3 py-1.5 font-mono text-sm">{s}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* After result */}
+                {turnResult && (
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {turnResult === "bust" && (
+                      <button
+                        onClick={retry}
+                        className="rounded-2xl p-4 glass border border-neon-yellow/30 text-neon-yellow font-bold flex items-center justify-center gap-2"
+                      >
+                        <RotateCcw size={18} /> Jeszcze raz
+                      </button>
+                    )}
                     <button
-                      onClick={next}
-                      className="rounded-2xl p-3 glass border border-transparent hover:border-border-bright flex items-center justify-center gap-2 text-sm font-medium transition-all"
+                      onClick={nextTarget}
+                      className={`rounded-2xl p-4 bg-neon-green text-background font-bold flex items-center justify-center gap-2 glow-green ${
+                        turnResult === "checkout" ? "col-span-2" : ""
+                      }`}
                     >
-                      <Shuffle size={16} /> Następny
+                      <Shuffle size={18} /> {selectMode === "custom" ? "Od nowa" : "Następny"}
                     </button>
-                  )}
-                  <button
-                    onClick={reset}
-                    className={`rounded-2xl p-3 glass border border-transparent hover:border-border-bright flex items-center justify-center gap-2 text-sm font-medium transition-all ${selectMode === "custom" ? "col-span-2" : ""}`}
-                  >
-                    <RotateCcw size={16} /> Reset
-                  </button>
-                </div>
+                  </div>
+                )}
+
+                {/* Input (hidden after result) */}
+                {!turnResult && (
+                  <>
+                    {/* Quick scores */}
+                    <div className="flex flex-wrap gap-2 mb-3 justify-center">
+                      {QUICK_SCORES.filter((s) => s <= remaining).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setInputValue(String(s))}
+                          className="glass-light rounded-xl px-3 py-2 text-sm font-mono font-bold hover:border-border-bright transition-all"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Input display */}
+                    <div className="glass rounded-2xl p-4 text-center mb-3">
+                      <p className="font-mono text-4xl font-bold">{inputValue || "0"}</p>
+                    </div>
+
+                    {/* Numpad */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {["1","2","3","4","5","6","7","8","9","DEL","0","✓"].map((k) => (
+                        <button
+                          key={k}
+                          onClick={() => {
+                            if (k === "✓") confirmScore();
+                            else handleKey(k);
+                          }}
+                          className={`rounded-xl py-4 font-mono font-bold text-xl transition-all active:scale-95 ${
+                            k === "✓"
+                              ? "bg-neon-green text-background glow-green"
+                              : k === "DEL"
+                              ? "glass text-neon-red"
+                              : "glass hover:border-border-bright"
+                          }`}
+                        >
+                          {k}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Reset */}
+                <button
+                  onClick={reset}
+                  className="w-full mt-4 rounded-2xl p-3 glass border border-transparent hover:border-border-bright flex items-center justify-center gap-2 text-sm text-muted transition-all"
+                >
+                  <RotateCcw size={14} /> Zakończ trening
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

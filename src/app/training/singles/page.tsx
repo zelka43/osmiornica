@@ -3,18 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { CircleDot, ChevronLeft, RotateCcw, Check, X } from "lucide-react";
+import { Target, ChevronLeft, RotateCcw, Check, X } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
 
 type Order = "random" | "asc" | "desc";
 type Phase = "setup" | "playing" | "summary";
 
-const ALL_TRIPLES = [...Array(20).keys()].map((i) => i + 1);
+const ALL_SINGLES = [...Array(20).keys()].map((i) => i + 1).concat([25]);
 
 function buildSequence(order: Order): number[] {
-  if (order === "asc") return [...Array(20).keys()].map((i) => i + 1);
-  if (order === "desc") return [...Array(20).keys()].map((i) => 20 - i);
-  const arr = [...ALL_TRIPLES];
+  if (order === "asc") return [...Array(20).keys()].map((i) => i + 1).concat([25]);
+  if (order === "desc") return [...Array(20).keys()].map((i) => 20 - i).concat([25]);
+  const arr = [...ALL_SINGLES];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -22,12 +22,16 @@ function buildSequence(order: Order): number[] {
   return arr;
 }
 
+function singleLabel(n: number) {
+  return n === 25 ? "BULL" : `${n}`;
+}
+
 interface TargetResult {
   target: number;
   attempts: number;
 }
 
-export default function TriplesTrainingPage() {
+export default function SinglesTrainingPage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("setup");
   const [order, setOrder] = useState<Order>("random");
@@ -87,12 +91,12 @@ export default function TriplesTrainingPage() {
             <button onClick={() => router.push("/match/new")} className="w-10 h-10 rounded-xl glass flex items-center justify-center">
               <ChevronLeft size={20} className="text-muted" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center">
-              <CircleDot className="text-neon-blue" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
+              <Target className="text-neon-purple" size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Trening trójek</h1>
-              <p className="text-sm text-muted">T1–T20 · do skutku</p>
+              <h1 className="text-xl font-bold">Trening singli</h1>
+              <p className="text-sm text-muted">1–20 + Bull · do skutku</p>
             </div>
           </div>
 
@@ -103,8 +107,8 @@ export default function TriplesTrainingPage() {
                 <div className="space-y-2 mb-8">
                   {([
                     { key: "random" as Order, label: "Losowe", desc: "Mieszana kolejność" },
-                    { key: "asc" as Order, label: "Od najmniejszego", desc: "T1 → T20" },
-                    { key: "desc" as Order, label: "Od największego", desc: "T20 → T1" },
+                    { key: "asc" as Order, label: "Od najmniejszego", desc: "1 → 20 → Bull" },
+                    { key: "desc" as Order, label: "Od największego", desc: "20 → 1 → Bull" },
                   ]).map(({ key, label, desc }) => (
                     <button
                       key={key}
@@ -164,9 +168,9 @@ export default function TriplesTrainingPage() {
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 1.2, opacity: 0 }}
-                      className="font-mono text-6xl font-bold text-neon-blue"
+                      className="font-mono text-6xl font-bold text-neon-purple"
                     >
-                      T{sequence[currentIdx]}
+                      {singleLabel(sequence[currentIdx])}
                     </motion.p>
                   </AnimatePresence>
                   <p className="text-sm text-muted mt-3">
@@ -219,9 +223,9 @@ export default function TriplesTrainingPage() {
                   <div className="space-y-1">
                     {results.map((r, i) => (
                       <div key={i} className="flex items-center gap-3 text-sm">
-                        <span className="font-mono font-bold w-10 text-neon-blue">T{r.target}</span>
+                        <span className="font-mono font-bold w-10 text-neon-purple">{singleLabel(r.target)}</span>
                         <div className="flex-1 h-1.5 bg-surface rounded-full">
-                          <div className="h-full bg-neon-blue rounded-full" style={{ width: `${Math.min(100, (1 / r.attempts) * 100)}%` }} />
+                          <div className="h-full bg-neon-purple rounded-full" style={{ width: `${Math.min(100, (1 / r.attempts) * 100)}%` }} />
                         </div>
                         <span className="font-mono text-xs text-muted w-12 text-right">
                           {r.attempts === 1 ? "1 rzut" : `${r.attempts} rzuty`}

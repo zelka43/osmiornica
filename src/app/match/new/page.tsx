@@ -99,6 +99,13 @@ export default function NewGamePage() {
                     onClick={() => router.push("/training/checkout")}
                   />
                   <TrainingCard
+                    icon={<Target size={20} className="text-neon-purple" />}
+                    iconBg="bg-neon-purple/10"
+                    label="Trening singli"
+                    desc="1–20 + Bull"
+                    onClick={() => router.push("/training/singles")}
+                  />
+                  <TrainingCard
                     icon={<CircleDot size={20} className="text-neon-green" />}
                     iconBg="bg-neon-green/10"
                     label="Trening doubli"
