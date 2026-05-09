@@ -119,6 +119,7 @@ export default function StatsPage() {
         const periodMatches = matches.filter(
           (m) =>
             m.status === "completed" &&
+            (m.matchType ?? "ranked") !== "friendly" &&
             m.playerIds.includes(player.id) &&
             m.createdAt >= currentRange.start &&
             m.createdAt < currentRange.end

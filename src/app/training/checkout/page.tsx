@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shuffle, ChevronLeft, RotateCcw } from "lucide-react";
@@ -21,6 +21,12 @@ function pickRandom(pool: number[]): number {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+function turnsLabel(n: number): string {
+  if (n === 1) return "1 tura";
+  if (n <= 4) return `${n} tury`;
+  return `${n} tur`;
+}
+
 export default function CheckoutTrainingPage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("setup");
@@ -32,7 +38,9 @@ export default function CheckoutTrainingPage() {
   const [target, setTarget] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [inputValue, setInputValue] = useState("");
-  const [attempts, setAttempts] = useState(0);
+  const [turnsPlayed, setTurnsPlayed] = useState(0);
+  const [checkoutsAttempted, setCheckoutsAttempted] = useState(0);
+  const [turnsThisCheckout, setTurnsThisCheckout] = useState(0);
   const [successes, setSuccesses] = useState(0);
   const [turnResult, setTurnResult] = useState<TurnResult>(null);
   const [roundScores, setRoundScores] = useState<number[]>([]);
@@ -49,6 +57,8 @@ export default function CheckoutTrainingPage() {
     setInputValue("");
     setTurnResult(null);
     setRoundScores([]);
+    setTurnsThisCheckout(0);
+    setCheckoutsAttempted((c) => c + 1);
   };
 
   const start = () => {
@@ -58,17 +68,30 @@ export default function CheckoutTrainingPage() {
         setCustomError("Niedostępny checkout");
         return;
       }
-      setAttempts(0);
+      setTurnsPlayed(0);
+      setCheckoutsAttempted(0);
       setSuccesses(0);
       setPhase("playing");
       startWithTarget(val);
       return;
     }
-    setAttempts(0);
+    setTurnsPlayed(0);
+    setCheckoutsAttempted(0);
     setSuccesses(0);
     setPhase("playing");
     startWithTarget(pickRandom(getPool()));
   };
+
+  // Auto-reset remaining to target after bust
+  useEffect(() => {
+    if (turnResult !== "bust") return;
+    const timer = setTimeout(() => {
+      setRemaining(target);
+      setRoundScores([]);
+      setTurnResult(null);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [turnResult, target]);
 
   const handleKey = (key: string) => {
     if (key === "DEL") {
@@ -88,21 +111,17 @@ export default function CheckoutTrainingPage() {
     const newRemaining = remaining - score;
     setRoundScores((prev) => [...prev, score]);
     setInputValue("");
+    setTurnsPlayed((t) => t + 1);
+    setTurnsThisCheckout((t) => t + 1);
 
     if (newRemaining < 0 || newRemaining === 1) {
-      setAttempts((a) => a + 1);
       setTurnResult("bust");
     } else if (newRemaining === 0) {
-      setAttempts((a) => a + 1);
       setSuccesses((s) => s + 1);
       setTurnResult("checkout");
     } else {
       setRemaining(newRemaining);
     }
-  };
-
-  const retry = () => {
-    startWithTarget(target);
   };
 
   const nextTarget = () => {
@@ -115,12 +134,13 @@ export default function CheckoutTrainingPage() {
 
   const reset = () => {
     setPhase("setup");
-    setAttempts(0);
+    setTurnsPlayed(0);
+    setCheckoutsAttempted(0);
     setSuccesses(0);
     setTurnResult(null);
   };
 
-  const successRate = attempts > 0 ? Math.round((successes / attempts) * 100) : 0;
+  const successRate = checkoutsAttempted > 0 ? Math.round((successes / checkoutsAttempted) * 100) : 0;
   const hint = CHECKOUTS[remaining] ?? null;
 
   return (
@@ -211,8 +231,8 @@ export default function CheckoutTrainingPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   <div className="glass rounded-2xl p-3 text-center">
-                    <p className="text-[10px] text-muted mb-1">Próby</p>
-                    <p className="font-mono text-xl font-bold">{attempts}</p>
+                    <p className="text-[10px] text-muted mb-1">Rundy</p>
+                    <p className="font-mono text-xl font-bold">{turnsPlayed}</p>
                   </div>
                   <div className="glass rounded-2xl p-3 text-center">
                     <p className="text-[10px] text-muted mb-1">Trafione</p>
@@ -230,10 +250,13 @@ export default function CheckoutTrainingPage() {
                   turnResult === "bust" ? "border border-neon-red/50 bg-neon-red/5" :
                   "border border-transparent"
                 }`}>
+                  <p className="text-[10px] text-muted uppercase tracking-widest mb-0.5">
+                    Tura {turnsThisCheckout + (turnResult ? 0 : 1)}
+                  </p>
                   <p className="text-xs text-muted mb-1 uppercase tracking-widest">Pozostało</p>
                   <AnimatePresence mode="wait">
                     <motion.p
-                      key={remaining}
+                      key={String(remaining) + String(turnResult)}
                       initial={{ scale: 0.85, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       className={`font-mono text-7xl font-bold ${
@@ -246,50 +269,39 @@ export default function CheckoutTrainingPage() {
                     </motion.p>
                   </AnimatePresence>
 
-                  {/* Hint */}
                   {!turnResult && hint && (
                     <p className="text-sm text-neon-yellow font-mono mt-2">{hint}</p>
                   )}
                   {turnResult === "checkout" && (
-                    <p className="text-neon-green font-bold mt-1">Checkout!</p>
+                    <p className="text-neon-green font-bold mt-1">Checkout! ({turnsLabel(turnsThisCheckout)})</p>
                   )}
                   {turnResult === "bust" && (
-                    <p className="text-neon-red font-bold mt-1">Pudło / Bust</p>
+                    <p className="text-neon-red font-bold mt-1">Bust – próba od nowa</p>
                   )}
                 </div>
 
                 {/* Round scores */}
-                {roundScores.length > 0 && !turnResult && (
-                  <div className="flex gap-2 mb-3 flex-wrap">
+                {roundScores.length > 0 && turnResult !== "checkout" && (
+                  <div className={`flex gap-2 mb-3 flex-wrap ${turnResult === "bust" ? "opacity-50" : ""}`}>
                     {roundScores.map((s, i) => (
                       <span key={i} className="glass-light rounded-lg px-3 py-1.5 font-mono text-sm">{s}</span>
                     ))}
                   </div>
                 )}
 
-                {/* After result */}
-                {turnResult && (
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    {turnResult === "bust" && (
-                      <button
-                        onClick={retry}
-                        className="rounded-2xl p-4 glass border border-neon-yellow/30 text-neon-yellow font-bold flex items-center justify-center gap-2"
-                      >
-                        <RotateCcw size={18} /> Jeszcze raz
-                      </button>
-                    )}
+                {/* After checkout: next button */}
+                {turnResult === "checkout" && (
+                  <div className="mb-4">
                     <button
                       onClick={nextTarget}
-                      className={`rounded-2xl p-4 bg-neon-green text-background font-bold flex items-center justify-center gap-2 glow-green ${
-                        turnResult === "checkout" ? "col-span-2" : ""
-                      }`}
+                      className="w-full rounded-2xl p-4 bg-neon-green text-background font-bold flex items-center justify-center gap-2 glow-green"
                     >
                       <Shuffle size={18} /> {selectMode === "custom" ? "Od nowa" : "Następny"}
                     </button>
                   </div>
                 )}
 
-                {/* Input (hidden after result) */}
+                {/* Input (hidden during result) */}
                 {!turnResult && (
                   <>
                     {/* Quick scores */}
