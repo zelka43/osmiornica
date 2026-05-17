@@ -125,6 +125,14 @@ function numberToPolishWords(n: number): string {
   return parts.join(" ");
 }
 
+function jitter(base: number, range: number): number {
+  return base + (Math.random() - 0.5) * 2 * range;
+}
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 /**
  * Announces the score like a professional dart referee, with emotional intonation.
  */
@@ -146,32 +154,52 @@ function announceScoreEN(
   remaining: number
 ): void {
   let scoreCall: string;
-  let pitch = 1;
-  let rate = 1;
+  let pitch = jitter(1.0, 0.05);
+  let rate = jitter(1.0, 0.05);
 
   if (turnTotal === 180) {
-    scoreCall = "One hundred and EIGHTY!";
-    pitch = 1.3;
-    rate = 1.1;
+    scoreCall = pick(["One hundred and EIGHTY!", "One. Eight. Zero!"]);
+    pitch = jitter(1.3, 0.1);
+    rate = jitter(1.1, 0.08);
   } else if (turnTotal >= 140) {
     scoreCall = `${turnTotal}!`;
-    pitch = 1.2;
-    rate = 1.05;
+    pitch = jitter(1.2, 0.08);
+    rate = jitter(1.05, 0.06);
+  } else if (turnTotal === 100) {
+    scoreCall = pick(["Ton!", "One hundred!"]);
+    pitch = jitter(1.1, 0.07);
+    rate = jitter(1.0, 0.05);
   } else if (turnTotal >= 100) {
-    scoreCall = turnTotal === 100 ? "Ton!" : `Ton ${turnTotal - 100}!`;
-    pitch = 1.1;
+    scoreCall = `Ton ${turnTotal - 100}!`;
+    pitch = jitter(1.1, 0.06);
+    rate = jitter(1.0, 0.05);
+  } else if (turnTotal === 85) {
+    scoreCall = pick(["Eighty five!", "Eight. Five."]);
+    pitch = jitter(1.05, 0.05);
+    rate = jitter(1.0, 0.05);
+  } else if (turnTotal === 60) {
+    scoreCall = pick(["Sixty!", "Six. Zero."]);
+    pitch = jitter(1.05, 0.06);
+    rate = jitter(1.0, 0.05);
+  } else if (turnTotal === 45) {
+    scoreCall = pick(["Forty five.", "Four. Five."]);
+    pitch = jitter(0.98, 0.05);
+  } else if (turnTotal === 26) {
+    scoreCall = pick(["Twenty six.", "Bed and breakfast.", "Two. Six."]);
+    pitch = jitter(0.95, 0.05);
+    rate = jitter(0.95, 0.05);
   } else if (turnTotal === 0) {
-    scoreCall = "No score!";
-    pitch = 0.8;
-    rate = 0.85;
+    scoreCall = pick(["No score!", "No shot!", "Missed it!"]);
+    pitch = jitter(0.8, 0.05);
+    rate = jitter(0.85, 0.05);
   } else if (turnTotal < 20) {
     scoreCall = `${turnTotal}.`;
-    pitch = 0.9;
-    rate = 0.95;
-  } else if (turnTotal === 26) {
-    scoreCall = "Twenty six.";
+    pitch = jitter(0.9, 0.06);
+    rate = jitter(0.95, 0.05);
   } else {
     scoreCall = `${turnTotal}.`;
+    pitch = jitter(1.0, 0.07);
+    rate = jitter(1.0, 0.05);
   }
 
   speak(`${scoreCall} ${playerName} requires ${remaining}.`, { pitch, rate });
@@ -183,30 +211,33 @@ function announceScorePL(
   remaining: number
 ): void {
   let scoreCall: string;
-  let pitch = 1;
-  let rate = 1;
+  let pitch = jitter(1.0, 0.05);
+  let rate = jitter(1.0, 0.05);
 
   if (turnTotal === 180) {
-    scoreCall = "Sto osiemdziesiąt!";
-    pitch = 1.3;
-    rate = 1.1;
+    scoreCall = pick(["Sto osiemdziesiąt!", "Maksimum!"]);
+    pitch = jitter(1.3, 0.1);
+    rate = jitter(1.1, 0.08);
   } else if (turnTotal >= 140) {
     scoreCall = `${numberToPolishWords(turnTotal)}!`;
-    pitch = 1.2;
-    rate = 1.05;
+    pitch = jitter(1.2, 0.08);
+    rate = jitter(1.05, 0.06);
   } else if (turnTotal >= 100) {
     scoreCall = `${numberToPolishWords(turnTotal)}!`;
-    pitch = 1.1;
+    pitch = jitter(1.1, 0.06);
+    rate = jitter(1.0, 0.05);
   } else if (turnTotal === 0) {
-    scoreCall = "Brak punktów!";
-    pitch = 0.8;
-    rate = 0.85;
+    scoreCall = pick(["Brak punktów!", "Żadnego!", "Nie trafi!"]);
+    pitch = jitter(0.8, 0.05);
+    rate = jitter(0.85, 0.05);
   } else if (turnTotal < 20) {
     scoreCall = `${numberToPolishWords(turnTotal)}.`;
-    pitch = 0.9;
-    rate = 0.95;
+    pitch = jitter(0.9, 0.06);
+    rate = jitter(0.95, 0.05);
   } else {
     scoreCall = `${numberToPolishWords(turnTotal)}.`;
+    pitch = jitter(1.0, 0.07);
+    rate = jitter(1.0, 0.05);
   }
 
   speak(`${scoreCall} ${playerName} potrzebuje ${numberToPolishWords(remaining)}.`, { pitch, rate });
@@ -217,9 +248,9 @@ function announceScorePL(
  */
 export function announceBust(_playerName: string): void {
   if (language === "pl") {
-    speak("Brak punktów!", { pitch: 0.8, rate: 0.85 });
+    speak(pick(["Brak punktów!", "Przebicie!", "Spalony!"]), { pitch: jitter(0.8, 0.05), rate: jitter(0.85, 0.05) });
   } else {
-    speak("No score!", { pitch: 0.8, rate: 0.85 });
+    speak(pick(["No score!", "Bust!", "Busted!"]), { pitch: jitter(0.8, 0.05), rate: jitter(0.85, 0.05) });
   }
 }
 
@@ -228,9 +259,15 @@ export function announceBust(_playerName: string): void {
  */
 export function announceCheckout(playerName: string): void {
   if (language === "pl") {
-    speak(`Zamknięcie! ${playerName} wygrywa mecz!`, { pitch: 1.3, rate: 0.8 });
+    speak(
+      pick([`Zamknięcie! ${playerName} wygrywa mecz!`, `${playerName}, strzał meczowy!`]),
+      { pitch: jitter(1.3, 0.08), rate: jitter(0.8, 0.05) }
+    );
   } else {
-    speak(`Game shot and the match! ${playerName}!`, { pitch: 1.3, rate: 0.8 });
+    speak(
+      pick([`Game shot and the match! ${playerName}!`, `${playerName} wins! Game shot!`]),
+      { pitch: jitter(1.3, 0.08), rate: jitter(0.8, 0.05) }
+    );
   }
 }
 

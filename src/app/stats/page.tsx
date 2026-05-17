@@ -31,10 +31,10 @@ const item = {
 };
 
 const PERIOD_LABELS: Record<TimePeriod, string> = {
-  all: "Wszystko",
-  yearly: "Rok",
   monthly: "Miesiąc",
   weekly: "Tydzień",
+  yearly: "Rok",
+  all: "Archiwum",
   daily: "Dzień",
 };
 
@@ -54,7 +54,7 @@ export default function StatsPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [mounted, setMounted] = useState(false);
-  const [period, setPeriod] = useState<TimePeriod>("all");
+  const [period, setPeriod] = useState<TimePeriod>("monthly");
   const [offset, setOffset] = useState(0);
   const [rankingMode, setRankingMode] = useState<"winpct" | "points" | "rating">("winpct");
 

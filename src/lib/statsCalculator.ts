@@ -358,7 +358,10 @@ export type AchievementKey =
   | "bestFirst9"
   | "bestAvg"
   | "bestCheckoutPct"
-  | "most26s";
+  | "most26s"
+  | "highestCheckout"
+  | "mostMonthlyTitles"
+  | "mostWeeklyTitles";
 
 export interface AchievementEntry {
   leaderId: string | null;
@@ -405,6 +408,15 @@ export function computeAchievementLeaders(
   const longestStreak = players.map((p) => ({ playerId: p.id, value: computeWinStreak(matches, p.id) }));
   const bestFirst9 = players.map((p) => ({ playerId: p.id, value: computeBestFirst9Avg(matches, p.id) }));
   const most26s = players.map((p) => ({ playerId: p.id, value: computeMost26Count(matches, p.id) }));
+  const highestCheckout = players.map((p) => ({ playerId: p.id, value: computeHighestCheckout(matches, p.id).value }));
+
+  const allPlayerIds = players.map((p) => p.id);
+  const periodTitlesPerPlayer = players.map((p) => ({
+    playerId: p.id,
+    titles: computePeriodTitles(matches, p.id, allPlayerIds),
+  }));
+  const mostMonthlyTitles = periodTitlesPerPlayer.map(({ playerId, titles }) => ({ playerId, value: titles.monthly.gold }));
+  const mostWeeklyTitles  = periodTitlesPerPlayer.map(({ playerId, titles }) => ({ playerId, value: titles.weekly.gold  }));
 
   return {
     mostMatches: makeEntry(mostMatches),
@@ -417,6 +429,9 @@ export function computeAchievementLeaders(
     bestAvg: makeEntry(bestAvg),
     bestCheckoutPct: makeEntry(bestCheckoutPct),
     most26s: makeEntry(most26s),
+    highestCheckout: makeEntry(highestCheckout),
+    mostMonthlyTitles: makeEntry(mostMonthlyTitles),
+    mostWeeklyTitles: makeEntry(mostWeeklyTitles),
   };
 }
 
