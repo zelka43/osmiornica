@@ -44,11 +44,29 @@ export default function MatchHistoryPage() {
 
   useEffect(() => {
     async function load() {
-      setMatches(await getMatches());
+      const cached = sessionStorage.getItem("history-cache");
+      if (cached) {
+        try {
+          setMatches(JSON.parse(cached));
+          setMounted(true);
+        } catch { /* ignore */ }
+      }
+      const fresh = await getMatches();
+      sessionStorage.setItem("history-cache", JSON.stringify(fresh));
+      setMatches(fresh);
       setMounted(true);
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const saved = sessionStorage.getItem("history-scroll");
+    if (saved) {
+      window.scrollTo({ top: parseInt(saved), behavior: "instant" });
+      sessionStorage.removeItem("history-scroll");
+    }
+  }, [mounted]);
 
   const handleDelete = async (id: string) => {
     await deleteMatch(id);
@@ -143,7 +161,10 @@ export default function MatchHistoryPage() {
                   <motion.div
                     key={match.id}
                     variants={item}
-                    onClick={() => router.push(`/match/history/${match.id}`)}
+                    onClick={() => {
+                      sessionStorage.setItem("history-scroll", String(window.scrollY));
+                      router.push(`/match/history/${match.id}`);
+                    }}
                     className="glass rounded-2xl p-4 space-y-3 border border-white/5 hover:border-white/10 transition-colors cursor-pointer"
                   >
                     {/* Top Row: Date + Game Mode */}

@@ -111,7 +111,7 @@ export default function MatchDetailPage({
           {/* Back button + header */}
           <motion.div variants={item} className="flex items-center gap-3 pt-4">
             <button
-              onClick={() => router.push("/match/history")}
+              onClick={() => router.back()}
               className="w-10 h-10 rounded-xl glass flex items-center justify-center"
             >
               <ArrowLeft size={18} className="text-muted" />
