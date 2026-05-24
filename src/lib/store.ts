@@ -307,7 +307,7 @@ export async function recalculateDoublesFromHistory(): Promise<number> {
         for (const dart of turn.darts) {
           if (isDoubleTerritory(r)) {
             doublesAttempted++;
-            if (r - dart.score === 0) doublesHit++;
+            if (r - dart.score === 0 && dart.multiplier === 2) doublesHit++;
           }
           r -= dart.score;
           if (r <= 0) break;

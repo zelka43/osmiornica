@@ -247,7 +247,7 @@ export default function MatchPage({
     for (const dart of darts) {
       if (isDoubleTerritory(runningRemaining)) {
         newDoublesAttempted++;
-        if (runningRemaining - dart.score === 0) {
+        if (runningRemaining - dart.score === 0 && dart.multiplier === 2) {
           newDoublesHit++;
         }
       }
