@@ -133,11 +133,18 @@ export default function MatchPage({
 
   useEffect(() => {
     async function load() {
-      const [m, allPlayers] = await Promise.all([getMatchById(id), getPlayers()]);
-      if (m) {
+      const [m0, allPlayers] = await Promise.all([getMatchById(id), getPlayers()]);
+      setPlayersData(allPlayers);
+      if (m0) {
+        let m = m0;
+        // Wznowienie: porzucony mecz otwarty w widoku gry wraca do stanu aktywnego
+        if (m.status === "abandoned") {
+          m = { ...m, status: "active" };
+          await saveMatch(m);
+          await setActiveMatch(m);
+        }
         setMatch(m);
       }
-      setPlayersData(allPlayers);
       setVoiceOn(isVoiceEnabled());
       setVoiceLang(getLanguage());
       try {
