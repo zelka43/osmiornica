@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Trophy, ChevronLeft, Play } from "lucide-react";
+
 import NavBar from "@/components/ui/NavBar";
 import { getTournamentById, getMatches, saveTournament, saveMatch, setActiveMatch } from "@/lib/store";
 import { applyLegResult, isPlayable } from "@/lib/tournament";
@@ -183,24 +184,70 @@ export default function TournamentBracketPage({ params }: { params: Promise<{ id
                       const isBye = node.round === 0 && (!node.p1Id || !node.p2Id) && node.winnerId !== null;
                       const wins = legsWonIn(node);
                       const playable = isPlayable(node);
+                      const decided = !!node.winnerId;
+                      const nodeLegs = node.legMatchIds
+                        .map((lid) => legMatches.find((m) => m.id === lid))
+                        .filter((m): m is Match => !!m);
+                      const unfinishedLeg = nodeLegs.some((m) => m.status !== "completed");
+                      const completedCount = nodeLegs.filter((m) => m.status === "completed").length;
+                      const w1 = node.p1Id ? wins[node.p1Id] ?? 0 : 0;
+                      const w2 = node.p2Id ? wins[node.p2Id] ?? 0 : 0;
                       return (
-                        <div key={node.id} className={`glass rounded-2xl p-3 ${node.winnerId ? "border border-white/5" : playable ? "border border-neon-green/30" : "border border-transparent"}`}>
+                        <div
+                          key={node.id}
+                          className={`glass rounded-2xl p-3 transition-all ${
+                            playable
+                              ? "border-2 border-neon-green/40 glow-green"
+                              : isBye
+                              ? "border border-neon-yellow/20"
+                              : decided
+                              ? "border border-white/5 opacity-75"
+                              : "border border-transparent"
+                          }`}
+                        >
                           {isBye ? (
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-sm">{nameOf(node.winnerId)}</span>
-                              <span className="text-xs text-muted">wolny los</span>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-bold text-sm">{nameOf(node.winnerId)}</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest bg-neon-yellow/10 text-neon-yellow px-2 py-0.5 rounded-full shrink-0">
+                                Wolny los
+                              </span>
                             </div>
                           ) : (
                             <>
-                              <PlayerRow name={nameOf(node.p1Id)} legs={node.p1Id ? wins[node.p1Id] ?? 0 : 0} isWinner={node.winnerId === node.p1Id} known={!!node.p1Id} />
-                              <div className="h-px bg-white/5 my-2" />
-                              <PlayerRow name={nameOf(node.p2Id)} legs={node.p2Id ? wins[node.p2Id] ?? 0 : 0} isWinner={node.winnerId === node.p2Id} known={!!node.p2Id} />
+                              <PlayerRow
+                                name={nameOf(node.p1Id)}
+                                known={!!node.p1Id}
+                                legs={w1}
+                                target={tournament.legsToWin}
+                                isWinner={decided && node.winnerId === node.p1Id}
+                              />
+                              <div className="flex items-center gap-2 my-1.5">
+                                <div className="h-px bg-white/5 flex-1" />
+                                {(node.p1Id || node.p2Id) && (
+                                  <span className="font-mono text-[11px] font-bold text-muted">
+                                    {w1}:{w2}
+                                  </span>
+                                )}
+                                <div className="h-px bg-white/5 flex-1" />
+                              </div>
+                              <PlayerRow
+                                name={nameOf(node.p2Id)}
+                                known={!!node.p2Id}
+                                legs={w2}
+                                target={tournament.legsToWin}
+                                isWinner={decided && node.winnerId === node.p2Id}
+                              />
                               {playable && (
                                 <button
                                   onClick={() => handlePlay(node)}
                                   className="w-full mt-3 rounded-xl py-2.5 font-bold bg-neon-green text-background glow-green flex items-center justify-center gap-2"
                                 >
-                                  <Play size={16} /> Graj leg
+                                  <Play size={16} />
+                                  {unfinishedLeg
+                                    ? "Wznów mecz"
+                                    : completedCount > 0
+                                    ? `Graj — leg ${completedCount + 1}`
+                                    : "Graj"}
                                 </button>
                               )}
                             </>
@@ -219,13 +266,41 @@ export default function TournamentBracketPage({ params }: { params: Promise<{ id
   );
 }
 
-function PlayerRow({ name, legs, isWinner, known }: { name: string; legs: number; isWinner: boolean; known: boolean }) {
+function PlayerRow({
+  name,
+  legs,
+  target,
+  isWinner,
+  known,
+}: {
+  name: string;
+  legs: number;
+  target: number;
+  isWinner: boolean;
+  known: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between">
-      <span className={`text-sm truncate ${isWinner ? "font-bold text-neon-green" : known ? "font-medium" : "text-muted italic"}`}>
-        {name}
+    <div className="flex items-center justify-between gap-2">
+      <span
+        className={`text-sm truncate flex items-center gap-1.5 ${
+          isWinner
+            ? "font-bold text-neon-green"
+            : known
+            ? "font-medium"
+            : "italic text-muted/60"
+        }`}
+      >
+        {isWinner && <Trophy size={13} className="text-neon-yellow shrink-0" />}
+        {known ? name : "Czeka…"}
       </span>
-      <span className={`font-mono text-sm ${isWinner ? "text-neon-green" : "text-muted"}`}>{legs}</span>
+      <span
+        className={`font-mono text-sm font-bold shrink-0 px-1.5 rounded-md ${
+          isWinner ? "text-neon-green bg-neon-green/10" : legs > 0 ? "text-muted" : "text-muted/50"
+        }`}
+      >
+        {legs}
+        <span className="text-[10px] font-normal text-muted/60">/{target}</span>
+      </span>
     </div>
   );
 }

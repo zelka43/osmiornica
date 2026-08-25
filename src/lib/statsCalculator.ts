@@ -1,7 +1,104 @@
-import type { PlayerStats, PlayerMatchState, Match, Player } from "@/types";
+import type { PlayerStats, PlayerMatchState, Match, Player, Tournament } from "@/types";
 
 function rankOnly(matches: Match[]): Match[] {
   return matches.filter((m) => (m.matchType ?? "ranked") === "ranked");
+}
+
+// ─── Tabela turniejowa (osobny, zamknięty tryb) ───
+
+export interface TournamentTableRow {
+  playerId: string;
+  titles: number;
+  starts: number;
+  matchesPlayed: number;
+  matchesWon: number;
+  avg: number; // średnia 3-dartkowa
+  doublesPct: number; // skuteczność na dablach %
+  tie: TieStats;
+}
+
+/** Agregaty z ukończonych legów turniejowych (matchType "tournament"). */
+export function computeTournamentTable(
+  players: Player[],
+  tournaments: Tournament[],
+  matches: Match[]
+): TournamentTableRow[] {
+  const tMatches = matches.filter(
+    (m) => m.matchType === "tournament" && m.status === "completed"
+  );
+
+  interface Acc {
+    titles: number;
+    starts: number;
+    mp: number;
+    mw: number;
+    darts: number;
+    pts: number;
+    dA: number;
+    dH: number;
+    tons: number;
+    oneEighties: number;
+  }
+  const acc = new Map<string, Acc>();
+
+  for (const p of players) {
+    const starts = tournaments.filter((t) => t.playerIds.includes(p.id)).length;
+    if (starts === 0) continue;
+    acc.set(p.id, {
+      titles: tournaments.filter((t) => t.championId === p.id).length,
+      starts,
+      mp: 0,
+      mw: 0,
+      darts: 0,
+      pts: 0,
+      dA: 0,
+      dH: 0,
+      tons: 0,
+      oneEighties: 0,
+    });
+  }
+
+  for (const m of tMatches) {
+    for (const pid of m.playerIds) {
+      const a = acc.get(pid);
+      const st = m.scores[pid];
+      if (!a || !st) continue;
+      a.mp++;
+      if (m.winnerId === pid) a.mw++;
+      a.darts += st.dartsThrown;
+      a.pts += st.pointsScored;
+      a.dA += st.doublesAttempted;
+      a.dH += st.doublesHit;
+      a.tons += st.tonPlus;
+      a.oneEighties += st.oneEighties;
+    }
+  }
+
+  return [...acc.entries()]
+    .map(([playerId, a]): TournamentTableRow => ({
+      playerId,
+      titles: a.titles,
+      starts: a.starts,
+      matchesPlayed: a.mp,
+      matchesWon: a.mw,
+      avg: a.darts > 0 ? (a.pts / a.darts) * 3 : 0,
+      doublesPct: a.dA > 0 ? (a.dH / a.dA) * 100 : 0,
+      tie: {
+        matchesWon: a.mw,
+        totalPointsScored: a.pts,
+        totalDartsThrown: a.darts,
+        doublesHit: a.dH,
+        doublesAttempted: a.dA,
+        tonPlus: a.tons,
+        oneEighties: a.oneEighties,
+      },
+    }))
+    .sort(
+      (x, y) =>
+        y.titles - x.titles ||
+        y.matchesWon - x.matchesWon ||
+        compareTiebreak(x.tie, y.tie)
+    );
 }
 
 export type TimePeriod = "all" | "yearly" | "monthly" | "weekly" | "daily";

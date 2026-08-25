@@ -13,10 +13,12 @@ import {
   X,
   Maximize2,
   Minimize2,
+  Target,
 } from "lucide-react";
-import { getMatchById, saveMatch, setActiveMatch, getPlayers, updatePlayer, subscribeToMatch } from "@/lib/store";
+import { getMatchById, saveMatch, setActiveMatch, getPlayers, updatePlayer, subscribeToMatch, getTournamentById, getMatches, saveTournament } from "@/lib/store";
 import { updateH2H } from "@/lib/store";
-import { validateScore, processTurn } from "@/lib/dartLogic";
+import { validateScore, processTurn, createInitialMatchState } from "@/lib/dartLogic";
+import { applyLegResult } from "@/lib/tournament";
 import { getCheckout } from "@/lib/checkouts";
 import {
   initVoice,
@@ -82,6 +84,51 @@ export default function MatchPage({
     currentPlayerName: string;
     currentState: import("@/types").PlayerMatchState;
   } | null>(null);
+  const [bull, setBull] = useState<{ p1Name: string; p2Name: string; scoreLine: string | null } | null>(null);
+  const [bullDoneFor, setBullDoneFor] = useState<string | null>(null);
+
+  // Turniejowy leg bez żadnego rzutu → czeka na rozstrzygnięcie "rzutem na bulla"
+  const bullNeeded =
+    !!match &&
+    match.matchType === "tournament" &&
+    match.status === "active" &&
+    match.turns.length === 0 &&
+    bullDoneFor !== match.id;
+
+  useEffect(() => {
+    if (!bullNeeded || !match?.tournamentId) return;
+    let cancelled = false;
+    void (async () => {
+      const t = await getTournamentById(match.tournamentId!);
+      let scoreLine: string | null = null;
+      if (t) {
+        const legs = (await getMatches({ withTurns: false })).filter(
+          (m) => m.tournamentId === t.id
+        );
+        const node = t.bracket.find((n) => n.legMatchIds.includes(match.id));
+        if (node) {
+          const wins: Record<string, number> = {};
+          for (const lid of node.legMatchIds) {
+            const m = legs.find((x) => x.id === lid);
+            if (m && m.status === "completed" && m.winnerId) {
+              wins[m.winnerId] = (wins[m.winnerId] ?? 0) + 1;
+            }
+          }
+          scoreLine = match.playerIds.map((pid) => wins[pid] ?? 0).join("–");
+        }
+      }
+      if (!cancelled) {
+        setBull({
+          p1Name: match.playerNames[0],
+          p2Name: match.playerNames[1],
+          scoreLine,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bullNeeded, match?.id, match?.tournamentId, match?.playerIds, match?.playerNames]);
 
   useEffect(() => {
     async function load() {
@@ -345,7 +392,7 @@ export default function MatchPage({
       setLastAction("checkout");
       announceCheckout(currentPlayerName);
       await finalizeMatch(updated);
-      setTimeout(() => setShowWinModal(true), 500);
+      await afterCheckout(updated);
     } else if (result.isBust) {
       setLastAction("bust");
       announceBust(currentPlayerName);
@@ -465,7 +512,7 @@ export default function MatchPage({
       setLastAction("checkout");
       announceCheckout(currentPlayerName);
       await finalizeMatch(updated);
-      setTimeout(() => setShowWinModal(true), 500);
+      await afterCheckout(updated);
     } else if (result.isBust) {
       setLastAction("bust");
       announceBust(currentPlayerName);
@@ -483,6 +530,76 @@ export default function MatchPage({
     const { score, isDoubleFinish, result, currentPlayerId, currentPlayerName, currentState } = pendingQuickTurn;
     setPendingQuickTurn(null);
     await finalizeQuickTurn(score, isDoubleFinish, result, currentPlayerId, currentPlayerName, currentState, count);
+  };
+
+  const pickBullWinner = async (playerIndex: number) => {
+    if (!match) return;
+    setBullDoneFor(match.id);
+    setBull(null);
+    await persistMatch({ ...match, currentPlayerIndex: playerIndex });
+  };
+
+  // Po zakończonym legu turniejowym: albo węzeł rozstrzygnięty (statystyki + powrót),
+  // albo automatyczny kolejny leg — gracze zostają w widoku meczu.
+  const chainOrFinishTournamentLeg = async (completedLeg: Match): Promise<boolean> => {
+    const tid = completedLeg.tournamentId;
+    if (!tid) return false;
+    const t = await getTournamentById(tid);
+    if (!t) return false;
+
+    const allLegs = (await getMatches({ withTurns: false })).filter(
+      (m) => m.tournamentId === tid
+    );
+    const recomputed = applyLegResult(t, allLegs);
+    const node = recomputed.bracket.find((n) => n.legMatchIds.includes(completedLeg.id));
+    if (!node) {
+      await saveTournament(recomputed);
+      return false;
+    }
+
+    if (node.winnerId) {
+      await saveTournament(recomputed);
+      return false;
+    }
+
+    const scores: Match["scores"] = {};
+    for (const pid of completedLeg.playerIds) {
+      scores[pid] = createInitialMatchState(completedLeg.startingScore);
+    }
+    const nextLeg: Match = {
+      id: uuidv4(),
+      gameMode: completedLeg.gameMode,
+      startingScore: completedLeg.startingScore,
+      playerIds: completedLeg.playerIds,
+      playerNames: completedLeg.playerNames,
+      status: "active",
+      currentPlayerIndex: 0,
+      scores,
+      winnerId: null,
+      winnerName: null,
+      createdAt: now(),
+      completedAt: null,
+      turns: [],
+      matchType: "tournament",
+      tournamentId: tid,
+    };
+
+    const updatedBracket = recomputed.bracket.map((n) =>
+      n.id === node.id ? { ...n, legMatchIds: [...n.legMatchIds, nextLeg.id] } : n
+    );
+    await saveTournament({ ...recomputed, bracket: updatedBracket });
+    await saveMatch(nextLeg);
+    await setActiveMatch(nextLeg);
+    router.replace(`/match/${nextLeg.id}`);
+    return true;
+  };
+
+  const afterCheckout = async (completed: Match): Promise<void> => {
+    if (completed.matchType === "tournament" && completed.tournamentId) {
+      const chained = await chainOrFinishTournamentLeg(completed);
+      if (chained) return;
+    }
+    setTimeout(() => setShowWinModal(true), 500);
   };
 
   const finalizeMatch = async (completedMatch: Match) => {
@@ -1017,6 +1134,57 @@ export default function MatchPage({
           )}
         </div>
       )}
+
+      {/* Bull-off: kto zaczyna lega (turnieje) */}
+      <AnimatePresence>
+        {bull && match.status === "active" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass rounded-2xl p-6 w-full max-w-sm text-center"
+            >
+              <Target size={32} className="text-neon-red mx-auto mb-3" />
+              <h3 className="text-lg font-bold mb-1">Rzut na bulla</h3>
+              <p className="text-sm text-muted mb-5">
+                Kto trafił bliżej środka? Ten gracz zaczyna.
+                {bull.scoreLine && bull.scoreLine !== "0–0" && (
+                  <> Stan w meczu: <span className="font-mono font-bold text-foreground">{bull.scoreLine}</span></>
+                )}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {[0, 1].map((i) => {
+                  const pid = match.playerIds[i];
+                  const player = playersData.find((p) => p.id === pid);
+                  return (
+                    <button
+                      key={pid}
+                      onClick={() => pickBullWinner(i)}
+                      className={`glass rounded-xl p-4 flex flex-col items-center gap-2 transition-all border ${
+                        i === 0 ? "border-neon-green/30 hover:border-neon-green/60" : "border-blue-500/30 hover:border-blue-400/60"
+                      }`}
+                    >
+                      <PlayerAvatar
+                        avatarUrl={player?.avatarUrl}
+                        displayName={match.playerNames[i]}
+                        colorIndex={i}
+                        size="md"
+                      />
+                      <span className="font-bold text-sm truncate max-w-full">{match.playerNames[i]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Double confirm modal */}
       <AnimatePresence>

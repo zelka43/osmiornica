@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Trophy, ChevronLeft, ChevronRight, Shuffle, BarChart3, Trash2 } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { getPlayers, getMatches, getTournaments, saveTournament, deleteTournament } from "@/lib/store";
-import { computeRtg } from "@/lib/statsCalculator";
+import { computeRtg, computeTournamentTable } from "@/lib/statsCalculator";
 import { generateBracket } from "@/lib/tournament";
 import { Player, Match, Tournament, GameMode, SeedingMode, PLAYER_COLORS } from "@/types";
 import { v4 as uuidv4 } from "uuid";
@@ -51,6 +51,11 @@ export default function TournamentListPage() {
       return [...prev, id];
     });
   };
+
+  const tournamentTable = useMemo(
+    () => computeTournamentTable(players, tournaments, matches),
+    [players, tournaments, matches]
+  );
 
   const handleCreate = async () => {
     if (selectedIds.length < MIN_PLAYERS) return;
@@ -252,6 +257,84 @@ export default function TournamentListPage() {
                 >
                   Start ({selectedIds.length})
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Tabela turniejowa */}
+          {!creating && tournamentTable.length > 0 && (
+            <div className="glass rounded-2xl p-4 mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 size={16} className="text-neon-yellow" />
+                <h2 className="text-sm font-bold">Tabela turniejowa</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs min-w-[340px]">
+                  <thead>
+                    <tr className="text-muted uppercase tracking-wider text-[10px]">
+                      <th className="text-left py-1 pr-2 font-semibold">Gracz</th>
+                      <th className="text-center py-1 px-1 font-semibold">🏆</th>
+                      <th className="text-center py-1 px-1 font-semibold">Starty</th>
+                      <th className="text-center py-1 px-1 font-semibold">W–P</th>
+                      <th className="text-center py-1 px-1 font-semibold">Śr</th>
+                      <th className="text-center py-1 pl-1 font-semibold">Dbl%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tournamentTable.map((row, i) => {
+                      const player = players.find((p) => p.id === row.playerId);
+                      const colorIndex =
+                        players.findIndex((p) => p.id === row.playerId) % PLAYER_COLORS.length;
+                      return (
+                        <tr key={row.playerId} className="border-t border-border/50">
+                          <td className="py-2 pr-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className={`w-4 text-center font-mono font-bold shrink-0 ${
+                                  i === 0 ? "text-neon-yellow" : "text-muted"
+                                }`}
+                              >
+                                {i + 1}
+                              </span>
+                              {player && (
+                                <PlayerAvatar
+                                  avatarUrl={player.avatarUrl}
+                                  displayName={player.displayName}
+                                  colorIndex={colorIndex}
+                                  size="sm"
+                                />
+                              )}
+                              <span className="truncate max-w-[90px] font-medium">
+                                {player?.displayName ?? "?"}
+                              </span>
+                            </div>
+                          </td>
+                          <td
+                            className={`text-center py-2 px-1 font-mono font-bold ${
+                              row.titles > 0 ? "text-neon-yellow" : "text-muted"
+                            }`}
+                          >
+                            {row.titles}
+                          </td>
+                          <td className="text-center py-2 px-1 font-mono text-muted">
+                            {row.starts}
+                          </td>
+                          <td className="text-center py-2 px-1 font-mono">
+                            {row.matchesWon}–{row.matchesPlayed - row.matchesWon}
+                          </td>
+                          <td className="text-center py-2 px-1 font-mono">
+                            {row.matchesPlayed > 0 ? row.avg.toFixed(1) : "—"}
+                          </td>
+                          <td className="text-center py-2 pl-1 font-mono">
+                            {row.tie.doublesAttempted > 0
+                              ? `${row.doublesPct.toFixed(0)}%`
+                              : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
