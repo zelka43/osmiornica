@@ -98,6 +98,7 @@ export interface TournamentMatch {
   winnerId: string | null;
   nextMatchId: string | null; // dokąd awansuje zwycięzca
   nextSlot: 1 | 2 | null;
+  bullWinnerId?: string | null; // kto wygrał rzut na bulla (decyduje o kolejności startów)
 }
 
 export interface Tournament {

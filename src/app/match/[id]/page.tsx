@@ -86,41 +86,42 @@ export default function MatchPage({
   } | null>(null);
   const [bull, setBull] = useState<{ p1Name: string; p2Name: string; scoreLine: string | null } | null>(null);
   const [bullDoneFor, setBullDoneFor] = useState<string | null>(null);
+  const [legInfo, setLegInfo] = useState<{ mid: string; legNo: number; scoreLine: string } | null>(null);
 
-  // Turniejowy leg bez żadnego rzutu → czeka na rozstrzygnięcie "rzutem na bulla"
-  const bullNeeded =
-    !!match &&
-    match.matchType === "tournament" &&
-    match.status === "active" &&
-    match.turns.length === 0 &&
-    bullDoneFor !== match.id;
-
+  // Dane meczu turniejowego: numer lega + stan w meczu + ewentualny rzut na bulla
+  // (bull rozstrzyga tylko 1. lega — kolejne startują na przemian)
   useEffect(() => {
-    if (!bullNeeded || !match?.tournamentId) return;
+    const m = match;
+    if (!m || m.matchType !== "tournament" || !m.tournamentId) return;
     let cancelled = false;
     void (async () => {
-      const t = await getTournamentById(match.tournamentId!);
-      let scoreLine: string | null = null;
-      if (t) {
-        const legs = (await getMatches({ withTurns: false })).filter(
-          (m) => m.tournamentId === t.id
-        );
-        const node = t.bracket.find((n) => n.legMatchIds.includes(match.id));
-        if (node) {
-          const wins: Record<string, number> = {};
-          for (const lid of node.legMatchIds) {
-            const m = legs.find((x) => x.id === lid);
-            if (m && m.status === "completed" && m.winnerId) {
-              wins[m.winnerId] = (wins[m.winnerId] ?? 0) + 1;
-            }
-          }
-          scoreLine = match.playerIds.map((pid) => wins[pid] ?? 0).join("–");
+      const t = await getTournamentById(m.tournamentId!);
+      if (!t || cancelled) return;
+      const allLegs = (await getMatches({ withTurns: false })).filter(
+        (x) => x.tournamentId === t.id
+      );
+      const node = t.bracket.find((n) => n.legMatchIds.includes(m.id));
+      if (!node || cancelled) return;
+
+      const wins: Record<string, number> = {};
+      for (const lid of node.legMatchIds) {
+        const lm = allLegs.find((x) => x.id === lid);
+        if (lm && lm.status === "completed" && lm.winnerId) {
+          wins[lm.winnerId] = (wins[lm.winnerId] ?? 0) + 1;
         }
       }
-      if (!cancelled) {
+      const scoreLine = m.playerIds.map((pid) => wins[pid] ?? 0).join("–");
+      setLegInfo({ mid: m.id, legNo: node.legMatchIds.length, scoreLine });
+
+      if (
+        m.status === "active" &&
+        m.turns.length === 0 &&
+        bullDoneFor !== m.id &&
+        node.bullWinnerId == null
+      ) {
         setBull({
-          p1Name: match.playerNames[0],
-          p2Name: match.playerNames[1],
+          p1Name: m.playerNames[0],
+          p2Name: m.playerNames[1],
           scoreLine,
         });
       }
@@ -128,7 +129,7 @@ export default function MatchPage({
     return () => {
       cancelled = true;
     };
-  }, [bullNeeded, match?.id, match?.tournamentId, match?.playerIds, match?.playerNames]);
+  }, [match?.id, bullDoneFor]);
 
   useEffect(() => {
     async function load() {
@@ -533,10 +534,18 @@ export default function MatchPage({
   };
 
   const pickBullWinner = async (playerIndex: number) => {
-    if (!match) return;
+    if (!match?.tournamentId) return;
+    const pid = match.playerIds[playerIndex];
     setBullDoneFor(match.id);
     setBull(null);
     await persistMatch({ ...match, currentPlayerIndex: playerIndex });
+    // Zapamiętaj w węźle drabinki — od tego zależy naprzemienność startów
+    const t = await getTournamentById(match.tournamentId);
+    if (!t) return;
+    const updatedBracket = t.bracket.map((n) =>
+      n.legMatchIds.includes(match.id) ? { ...n, bullWinnerId: pid } : n
+    );
+    await saveTournament({ ...t, bracket: updatedBracket });
   };
 
   // Po zakończonym legu turniejowym: albo węzeł rozstrzygnięty (statystyki + powrót),
@@ -562,6 +571,16 @@ export default function MatchPage({
       return false;
     }
 
+    // Kolejny leg zaczyna drugi gracz — naprzemiennie względem zwycięzcy bulla:
+    // leg 1 zaczyna zwycięzca bulla, leg 2 przeciwnik, leg 3 znów zwycięzca...
+    const legNumber = node.legMatchIds.length + 1;
+    let starterIdx = 0;
+    if (node.bullWinnerId) {
+      const bullIdx = completedLeg.playerIds.indexOf(node.bullWinnerId);
+      starterIdx =
+        legNumber % 2 === 1 ? Math.max(0, bullIdx) : 1 - Math.max(0, bullIdx);
+    }
+
     const scores: Match["scores"] = {};
     for (const pid of completedLeg.playerIds) {
       scores[pid] = createInitialMatchState(completedLeg.startingScore);
@@ -573,7 +592,7 @@ export default function MatchPage({
       playerIds: completedLeg.playerIds,
       playerNames: completedLeg.playerNames,
       status: "active",
-      currentPlayerIndex: 0,
+      currentPlayerIndex: starterIdx,
       scores,
       winnerId: null,
       winnerName: null,
@@ -739,6 +758,12 @@ export default function MatchPage({
   const currentRemaining = match.scores[currentPlayerId]?.remaining ?? 0;
   const checkoutHint = currentRemaining <= 170 ? getCheckout(currentRemaining) : null;
 
+  // W turnieju: "Leg 2 · 1–0" zamiast numeru rundy
+  const legBadge =
+    match.matchType === "tournament" && legInfo && legInfo.mid === match.id
+      ? `Leg ${legInfo.legNo}${legInfo.scoreLine !== "0–0" ? ` · ${legInfo.scoreLine}` : ""}`
+      : null;
+
   // Get last few turns for history
   const recentTurns = match.turns.slice(-6).reverse();
 
@@ -751,7 +776,7 @@ export default function MatchPage({
             {match.gameMode}
           </span>
           <span className="text-muted text-sm">
-            Runda {Math.floor(match.turns.length / match.playerIds.length) + 1}
+            {legBadge ?? `Runda ${Math.floor(match.turns.length / match.playerIds.length) + 1}`}
           </span>
         </div>
         <div className="flex items-center gap-1">
