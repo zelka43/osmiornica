@@ -52,6 +52,23 @@ export default function NewGamePage() {
             <ChevronRight size={18} className="text-muted" />
           </motion.button>
 
+          {/* Turniej */}
+          <p className="text-xs font-bold text-muted uppercase tracking-widest mb-3">Turniej</p>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push("/tournament")}
+            className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-4 flex items-center gap-4 mb-8 transition-all duration-200"
+          >
+            <div className="w-11 h-11 rounded-xl bg-neon-yellow/10 flex items-center justify-center shrink-0">
+              <Trophy className="text-neon-yellow" size={22} />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-bold text-base">Turniej pucharowy</p>
+              <p className="text-sm text-muted">3–8 graczy · osobny tryb, nie liczy się do statystyk</p>
+            </div>
+            <ChevronRight size={18} className="text-muted" />
+          </motion.button>
+
           {/* Tryb treningowy */}
           <p className="text-xs font-bold text-muted uppercase tracking-widest mb-3">Tryb treningowy</p>
 

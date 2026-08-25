@@ -1,7 +1,7 @@
 import type { PlayerStats, PlayerMatchState, Match, Player } from "@/types";
 
 function rankOnly(matches: Match[]): Match[] {
-  return matches.filter((m) => (m.matchType ?? "ranked") !== "friendly");
+  return matches.filter((m) => (m.matchType ?? "ranked") === "ranked");
 }
 
 export type TimePeriod = "all" | "yearly" | "monthly" | "weekly" | "daily";
@@ -171,6 +171,42 @@ export function calculateCheckoutPercentage(
   return (doublesHit / doublesAttempted) * 100;
 }
 
+/** RTG (W/E[W]) gracza ze wszystkich rozegranych meczów rankingowych. */
+export function computeRtg(playerId: string, matches: Match[]): number {
+  const completed = rankOnly(matches).filter(
+    (m) => m.status === "completed" && m.playerIds.includes(playerId)
+  );
+  if (completed.length === 0) return 0;
+  const wins = completed.filter((m) => m.winnerId === playerId).length;
+  const expected = completed.reduce((s, m) => s + 1 / m.playerIds.length, 0);
+  return expected > 0 ? wins / expected : 0;
+}
+
+/** Fields needed to break a ranking tie. */
+export type TieStats = Pick<
+  PlayerStats,
+  | "matchesWon"
+  | "totalPointsScored"
+  | "totalDartsThrown"
+  | "doublesHit"
+  | "doublesAttempted"
+  | "tonPlus"
+  | "oneEighties"
+>;
+
+/** Wspólny łańcuch remisów dla wszystkich tabel:
+ *  zwycięstwa → średnia 3-dart → checkout% → 100+ (ostatni fallback). */
+export function compareTiebreak(a: TieStats, b: TieStats): number {
+  if (b.matchesWon !== a.matchesWon) return b.matchesWon - a.matchesWon;
+  const avgA = calculateThreeDartAvg(a.totalPointsScored, a.totalDartsThrown);
+  const avgB = calculateThreeDartAvg(b.totalPointsScored, b.totalDartsThrown);
+  if (avgB !== avgA) return avgB - avgA;
+  const coA = calculateCheckoutPercentage(a.doublesHit, a.doublesAttempted);
+  const coB = calculateCheckoutPercentage(b.doublesHit, b.doublesAttempted);
+  if (coB !== coA) return coB - coA;
+  return (b.tonPlus + b.oneEighties) - (a.tonPlus + a.oneEighties);
+}
+
 // ─── Advanced per-player stats (computed from full match history) ───
 
 /** T20 + T19 throws counted from darts array (detailed mode only) */
@@ -286,13 +322,27 @@ export function computePeriodTitles(
   const earliest = Math.min(...completed.map((m) => m.createdAt));
   const now = new Date();
 
-  function rtgInRange(pid: string, start: number, end: number): { rtg: number; count: number } {
+  function rtgInRange(pid: string, start: number, end: number): { rtg: number; count: number; tie: TieStats } {
     const inRange = completed.filter((m) => m.playerIds.includes(pid) && m.createdAt >= start && m.createdAt < end);
     const count = inRange.length;
-    if (count === 0) return { rtg: 0, count: 0 };
-    const wins = inRange.filter((m) => m.winnerId === pid).length;
+    const tie: TieStats = {
+      matchesWon: 0, totalPointsScored: 0, totalDartsThrown: 0,
+      doublesHit: 0, doublesAttempted: 0, tonPlus: 0, oneEighties: 0,
+    };
+    if (count === 0) return { rtg: 0, count: 0, tie };
+    for (const m of inRange) {
+      const st = m.scores[pid];
+      if (m.winnerId === pid) tie.matchesWon++;
+      if (!st) continue;
+      tie.totalPointsScored += st.pointsScored;
+      tie.totalDartsThrown += st.dartsThrown;
+      tie.doublesHit += st.doublesHit;
+      tie.doublesAttempted += st.doublesAttempted;
+      tie.tonPlus += st.tonPlus;
+      tie.oneEighties += st.oneEighties;
+    }
     const expected = inRange.reduce((s, m) => s + 1 / m.playerIds.length, 0);
-    return { rtg: expected > 0 ? wins / expected : 0, count };
+    return { rtg: expected > 0 ? tie.matchesWon / expected : 0, count, tie };
   }
 
   function getPeriodMedals(periods: { start: number; end: number }[], minMatches: number): PeriodMedals {
@@ -302,7 +352,7 @@ export function computePeriodTitles(
       const ranked = allPlayerIds
         .map((pid) => ({ pid, ...rtgInRange(pid, start, end) }))
         .filter((r) => r.count >= minMatches)
-        .sort((a, b) => b.rtg - a.rtg);
+        .sort((a, b) => (b.rtg !== a.rtg ? b.rtg - a.rtg : compareTiebreak(a.tie, b.tie)));
       const rank = ranked.findIndex((r) => r.pid === playerId) + 1;
       if (rank === 1) gold++;
       else if (rank === 2) silver++;

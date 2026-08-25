@@ -101,15 +101,15 @@ export default function H2HPage() {
 
   const currentRange = useMemo(() => getPeriodRange(period, offset), [period, offset]);
 
-  const [allSharedMatches, setAllSharedMatches] = useState<Match[]>([]);
+  const [fetchedMatches, setFetchedMatches] = useState<Match[]>([]);
+  const selectionValid = !!player1Id && !!player2Id && player1Id !== player2Id;
 
   useEffect(() => {
-    if (!player1Id || !player2Id || player1Id === player2Id) {
-      setAllSharedMatches([]);
-      return;
-    }
-    getMatchesBetweenPlayers(player1Id, player2Id).then(setAllSharedMatches);
+    if (!player1Id || !player2Id || player1Id === player2Id) return;
+    getMatchesBetweenPlayers(player1Id, player2Id).then(setFetchedMatches);
   }, [player1Id, player2Id]);
+
+  const allSharedMatches = selectionValid ? fetchedMatches : [];
 
   const filteredMatches = useMemo(() => {
     if (period === "all") return allSharedMatches;

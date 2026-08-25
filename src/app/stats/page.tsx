@@ -10,6 +10,7 @@ import {
   calculateThreeDartAvg,
   calculateCheckoutPercentage,
   calculateStatsForRange,
+  compareTiebreak,
   getPeriodRange,
   MIN_MATCHES,
   type TimePeriod,
@@ -56,7 +57,7 @@ export default function StatsPage() {
   const [mounted, setMounted] = useState(false);
   const [period, setPeriod] = useState<TimePeriod>("monthly");
   const [offset, setOffset] = useState(0);
-  const [rankingMode, setRankingMode] = useState<"winpct" | "points" | "rating">("winpct");
+  const [rankingMode, setRankingMode] = useState<"winpct" | "points" | "rating">("rating");
 
   useEffect(() => {
     async function load() {
@@ -77,11 +78,7 @@ export default function StatsPage() {
     const minMatches = MIN_MATCHES[period];
 
     const sortFn = (a: RankedPlayer, b: RankedPlayer) => {
-      const tiebreak = () => {
-        if (b.threeDartAvg !== a.threeDartAvg) return b.threeDartAvg - a.threeDartAvg;
-        if (b.checkoutPct  !== a.checkoutPct)  return b.checkoutPct  - a.checkoutPct;
-        return b.tonPlus - a.tonPlus;
-      };
+      const tiebreak = () => compareTiebreak(a.stats, b.stats);
       if (rankingMode === "points") {
         if (b.points !== a.points) return b.points - a.points;
         return tiebreak();
@@ -119,7 +116,7 @@ export default function StatsPage() {
         const periodMatches = matches.filter(
           (m) =>
             m.status === "completed" &&
-            (m.matchType ?? "ranked") !== "friendly" &&
+            (m.matchType ?? "ranked") === "ranked" &&
             m.playerIds.includes(player.id) &&
             m.createdAt >= currentRange.start &&
             m.createdAt < currentRange.end

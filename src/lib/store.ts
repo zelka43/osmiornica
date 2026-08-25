@@ -1,4 +1,4 @@
-import { Player, Match, H2HRecord, PlayerStats, emptyStats } from "@/types";
+import { Player, Match, H2HRecord, PlayerStats, Tournament, emptyStats } from "@/types";
 import { supabase } from "./supabase";
 import { v4 as uuidv4 } from "uuid";
 
@@ -16,7 +16,7 @@ export async function getPlayers(): Promise<Player[]> {
   return (data ?? []).map(mapPlayer);
 }
 
-export async function addPlayer(name: string): Promise<Player> {
+export async function addPlayer(name: string): Promise<Player | null> {
   const player: Player = {
     id: uuidv4(),
     displayName: name.trim(),
@@ -25,21 +25,26 @@ export async function addPlayer(name: string): Promise<Player> {
     stats: { ...emptyStats },
   };
   const { error } = await supabase.from("players").insert(toPlayerRow(player));
-  if (error) console.error("addPlayer error:", error);
+  if (error) {
+    console.error("addPlayer error:", error);
+    return null;
+  }
   return player;
 }
 
-export async function removePlayer(id: string): Promise<void> {
+export async function removePlayer(id: string): Promise<boolean> {
   const { error } = await supabase.from("players").delete().eq("id", id);
   if (error) console.error("removePlayer error:", error);
+  return !error;
 }
 
-export async function updatePlayer(player: Player): Promise<void> {
+export async function updatePlayer(player: Player): Promise<boolean> {
   const { error } = await supabase
     .from("players")
     .update(toPlayerRow(player))
     .eq("id", player.id);
   if (error) console.error("updatePlayer error:", error);
+  return !error;
 }
 
 export async function getPlayerById(id: string): Promise<Player | undefined> {
@@ -54,10 +59,17 @@ export async function getPlayerById(id: string): Promise<Player | undefined> {
 
 // ─── Matches ───
 
-export async function getMatches(): Promise<Match[]> {
+// Kolumny meczu bez historii rzutów — do list (dashboard, historia, drabinki)
+const MATCH_LIST_COLUMNS =
+  "id, game_mode, starting_score, player_ids, player_names, status, current_player_index, scores, winner_id, winner_name, created_at, completed_at, match_type, tournament_id";
+
+export async function getMatches(
+  options?: { withTurns?: boolean }
+): Promise<Match[]> {
+  const withTurns = options?.withTurns ?? true;
   const { data, error } = await supabase
     .from("matches")
-    .select("*")
+    .select(withTurns ? "*" : MATCH_LIST_COLUMNS)
     .order("created_at", { ascending: false });
   if (error) {
     console.error("getMatches error:", error);
@@ -66,11 +78,12 @@ export async function getMatches(): Promise<Match[]> {
   return (data ?? []).map(mapMatch);
 }
 
-export async function saveMatch(match: Match): Promise<void> {
+export async function saveMatch(match: Match): Promise<boolean> {
   const { error } = await supabase
     .from("matches")
     .upsert(toMatchRow(match), { onConflict: "id" });
   if (error) console.error("saveMatch error:", error);
+  return !error;
 }
 
 export async function getMatchById(id: string): Promise<Match | undefined> {
@@ -83,9 +96,10 @@ export async function getMatchById(id: string): Promise<Match | undefined> {
   return mapMatch(data);
 }
 
-export async function deleteMatch(id: string): Promise<void> {
+export async function deleteMatch(id: string): Promise<boolean> {
   const { error } = await supabase.from("matches").delete().eq("id", id);
   if (error) console.error("deleteMatch error:", error);
+  return !error;
 }
 
 export async function getActiveMatch(): Promise<Match | null> {
@@ -106,6 +120,46 @@ export async function setActiveMatch(match: Match | null): Promise<void> {
     .from("app_state")
     .upsert({ key: "active_match_id", value: match ? match.id : null });
   if (error) console.error("setActiveMatch error:", error);
+}
+
+// ─── Tournaments ───
+
+export async function getTournaments(): Promise<Tournament[]> {
+  const { data, error } = await supabase
+    .from("tournaments")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("getTournaments error:", error);
+    return [];
+  }
+  return (data ?? []).map(mapTournament);
+}
+
+export async function getTournamentById(id: string): Promise<Tournament | undefined> {
+  const { data, error } = await supabase
+    .from("tournaments")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error || !data) return undefined;
+  return mapTournament(data);
+}
+
+export async function saveTournament(tournament: Tournament): Promise<boolean> {
+  const { error } = await supabase
+    .from("tournaments")
+    .upsert(toTournamentRow(tournament), { onConflict: "id" });
+  if (error) console.error("saveTournament error:", error);
+  return !error;
+}
+
+export async function deleteTournament(id: string): Promise<boolean> {
+  // Usuń legi powiązane z turniejem, potem sam turniej
+  await supabase.from("matches").delete().eq("tournament_id", id);
+  const { error } = await supabase.from("tournaments").delete().eq("id", id);
+  if (error) console.error("deleteTournament error:", error);
+  return !error;
 }
 
 // ─── H2H ───
@@ -151,7 +205,7 @@ export async function getMatchesBetweenPlayers(
     console.error("getMatchesBetweenPlayers error:", error);
     return [];
   }
-  return (data ?? []).map(mapMatch).filter((m) => (m.matchType ?? "ranked") !== "friendly");
+  return (data ?? []).map(mapMatch).filter((m) => (m.matchType ?? "ranked") === "ranked");
 }
 
 export async function updateH2H(
@@ -215,7 +269,7 @@ export async function deleteMatchesSince(sinceTimestamp: number): Promise<void> 
 export async function recalculateAllPlayerStats(): Promise<void> {
   const players = await getPlayers();
   const matches = (await getMatches()).filter(
-    (m) => m.status === "completed" && (m.matchType ?? "ranked") !== "friendly"
+    (m) => m.status === "completed" && (m.matchType ?? "ranked") === "ranked"
   );
 
   for (const player of players) {
@@ -358,7 +412,30 @@ export async function exportAllData(): Promise<string> {
 }
 
 export async function importAllData(json: string): Promise<void> {
-  const data = JSON.parse(json);
+  // Waliduj CAŁE dane zanim cokolwiek usuniemy z bazy
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error("Plik nie zawiera poprawnego JSON-a");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Nieprawidłowa struktura pliku");
+  }
+  const data = parsed as { players?: Player[]; matches?: Match[]; h2h?: H2HRecord[]; activeMatch?: Match | null };
+  for (const [key, value] of [
+    ["players", data.players],
+    ["matches", data.matches],
+    ["h2h", data.h2h],
+  ] as const) {
+    if (value === undefined) continue;
+    if (!Array.isArray(value)) {
+      throw new Error(`Pole "${key}" powinno być tablicą`);
+    }
+    if (value.some((r) => !r || typeof r.id !== "string")) {
+      throw new Error(`Nieprawidłowe rekordy w polu "${key}"`);
+    }
+  }
 
   // Clear existing data
   await clearAllData();
@@ -506,6 +583,7 @@ function mapMatch(row: any): Match {
     completedAt: row.completed_at,
     turns: row.turns ?? [],
     matchType: row.match_type ?? "ranked",
+    tournamentId: row.tournament_id ?? undefined,
   };
 }
 
@@ -525,6 +603,42 @@ function toMatchRow(match: Match) {
     completed_at: match.completedAt,
     turns: match.turns,
     match_type: match.matchType,
+    tournament_id: match.tournamentId ?? null,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapTournament(row: any): Tournament {
+  return {
+    id: row.id,
+    name: row.name,
+    gameMode: row.game_mode,
+    legsToWin: row.legs_to_win,
+    seeding: row.seeding,
+    status: row.status,
+    playerIds: row.player_ids,
+    playerNames: row.player_names,
+    bracket: row.bracket ?? [],
+    championId: row.champion_id ?? null,
+    createdAt: row.created_at,
+    completedAt: row.completed_at ?? null,
+  };
+}
+
+function toTournamentRow(t: Tournament) {
+  return {
+    id: t.id,
+    name: t.name,
+    game_mode: t.gameMode,
+    legs_to_win: t.legsToWin,
+    seeding: t.seeding,
+    status: t.status,
+    player_ids: t.playerIds,
+    player_names: t.playerNames,
+    bracket: t.bracket,
+    champion_id: t.championId,
+    created_at: t.createdAt,
+    completed_at: t.completedAt,
   };
 }
 

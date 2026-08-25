@@ -51,7 +51,7 @@ export default function MatchHistoryPage() {
           setMounted(true);
         } catch { /* ignore */ }
       }
-      const fresh = await getMatches();
+      const fresh = await getMatches({ withTurns: false });
       sessionStorage.setItem("history-cache", JSON.stringify(fresh));
       setMatches(fresh);
       setMounted(true);
@@ -101,11 +101,14 @@ export default function MatchHistoryPage() {
     );
   }
 
-  const completedMatches = [...matches]
+  // Legi turniejowe nie pojawiają się w historii meczów
+  const nonTournament = matches.filter((m) => (m.matchType ?? "ranked") !== "tournament");
+
+  const completedMatches = [...nonTournament]
     .filter((m) => m.status === "completed")
     .sort((a, b) => (b.completedAt ?? b.createdAt) - (a.completedAt ?? a.createdAt));
 
-  const unfinishedMatches = [...matches]
+  const unfinishedMatches = [...nonTournament]
     .filter((m) => m.status === "active" || m.status === "abandoned")
     .sort((a, b) => b.createdAt - a.createdAt);
 

@@ -57,7 +57,7 @@ export default function DashboardPage() {
     async function load() {
       const [am, m, p] = await Promise.all([
         getActiveMatch(),
-        getMatches(),
+        getMatches({ withTurns: false }),
         getPlayers(),
       ]);
       setActiveMatch(am);
@@ -68,11 +68,14 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  const recentMatches = [...matches]
+  // Legi turniejowe to osobny tryb — nie pokazujemy ich na dashboardzie
+  const nonTournamentMatches = matches.filter((m) => (m.matchType ?? "ranked") !== "tournament");
+
+  const recentMatches = [...nonTournamentMatches]
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, 5);
 
-  const completedCount = matches.filter((m) => m.status === "completed").length;
+  const completedCount = nonTournamentMatches.filter((m) => m.status === "completed").length;
 
   if (!mounted) {
     return (

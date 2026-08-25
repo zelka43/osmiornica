@@ -31,6 +31,10 @@ export default function PlayersManagePage() {
     const trimmed = name.trim();
     if (!trimmed) return;
     const player = await addPlayer(trimmed);
+    if (!player) {
+      alert("Nie udało się dodać gracza — sprawdź połączenie z internetem.");
+      return;
+    }
     setPlayers((prev) => [...prev, player]);
     setName("");
     inputRef.current?.focus();

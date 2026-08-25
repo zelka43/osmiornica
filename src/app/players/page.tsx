@@ -34,6 +34,7 @@ import {
   computeBestFirst9Avg,
   computePeriodTitles,
   computeAchievementLeaders,
+  compareTiebreak,
   type AchievementKey,
   type AchievementEntry,
 } from "@/lib/statsCalculator";
@@ -57,7 +58,7 @@ function computeRatingValue(player: Player, matches: Match[], mode: RankingMode)
   const winPct = s.matchesWon / s.matchesPlayed;
   if (mode === "winpct") return winPct;
   const completed = matches.filter(
-    (m) => m.status === "completed" && m.playerIds.includes(player.id)
+    (m) => m.status === "completed" && (m.matchType ?? "ranked") === "ranked" && m.playerIds.includes(player.id)
   );
   if (mode === "points") {
     const defeated = completed
@@ -115,7 +116,7 @@ export default function PlayersPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [mounted, setMounted] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [rankingMode, setRankingMode] = useState<RankingMode>("winpct");
+  const [rankingMode, setRankingMode] = useState<RankingMode>("rating");
   const [modal, setModal] = useState<ModalData | null>(null);
   const [openTrophyPanel, setOpenTrophyPanel] = useState<"weekly" | "monthly" | "yearly" | null>(null);
 
@@ -139,13 +140,7 @@ export default function PlayersPage() {
         .sort((a, b) => {
           const primary = computeRatingValue(b, matches, rankingMode) - computeRatingValue(a, matches, rankingMode);
           if (primary !== 0) return primary;
-          const avgA = a.stats.totalDartsThrown > 0 ? (a.stats.totalPointsScored / a.stats.totalDartsThrown) * 3 : 0;
-          const avgB = b.stats.totalDartsThrown > 0 ? (b.stats.totalPointsScored / b.stats.totalDartsThrown) * 3 : 0;
-          if (avgB !== avgA) return avgB - avgA;
-          const coA = a.stats.doublesAttempted > 0 ? a.stats.doublesHit / a.stats.doublesAttempted : 0;
-          const coB = b.stats.doublesAttempted > 0 ? b.stats.doublesHit / b.stats.doublesAttempted : 0;
-          if (coB !== coA) return coB - coA;
-          return (b.stats.tonPlus + b.stats.oneEighties) - (a.stats.tonPlus + a.stats.oneEighties);
+          return compareTiebreak(a.stats, b.stats);
         })
         .concat(players.filter((p) => p.stats.matchesPlayed === 0)),
     [players, matches, rankingMode]
@@ -165,12 +160,7 @@ export default function PlayersPage() {
         const wpA = a.stats.matchesWon / a.stats.matchesPlayed;
         const wpB = b.stats.matchesWon / b.stats.matchesPlayed;
         if (wpB !== wpA) return wpB - wpA;
-        const avgA = a.stats.totalDartsThrown > 0 ? (a.stats.totalPointsScored / a.stats.totalDartsThrown) * 3 : 0;
-        const avgB = b.stats.totalDartsThrown > 0 ? (b.stats.totalPointsScored / b.stats.totalDartsThrown) * 3 : 0;
-        if (avgB !== avgA) return avgB - avgA;
-        const coA = a.stats.doublesAttempted > 0 ? a.stats.doublesHit / a.stats.doublesAttempted : 0;
-        const coB = b.stats.doublesAttempted > 0 ? b.stats.doublesHit / b.stats.doublesAttempted : 0;
-        return coB - coA;
+        return compareTiebreak(a.stats, b.stats);
       });
     const map: Record<string, number> = {};
     sorted.forEach((p, i) => { map[p.id] = i + 1; });
@@ -178,7 +168,7 @@ export default function PlayersPage() {
   }, [players]);
 
   const selected = players.find((p) => p.id === selectedId) ?? null;
-  const completedMatches = useMemo(() => matches.filter((m) => m.status === "completed"), [matches]);
+  const completedMatches = useMemo(() => matches.filter((m) => m.status === "completed" && (m.matchType ?? "ranked") === "ranked"), [matches]);
 
   // Per-player advanced stats (memoised)
   const advancedStats = useMemo(() => {

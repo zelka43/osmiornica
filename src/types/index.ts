@@ -34,7 +34,7 @@ export const emptyStats: PlayerStats = {
 
 export type GameMode = "501" | "301";
 
-export type MatchType = "ranked" | "friendly";
+export type MatchType = "ranked" | "friendly" | "tournament";
 
 export interface PlayerMatchState {
   remaining: number;
@@ -62,6 +62,10 @@ export interface Turn {
   isBust: boolean;
   isCheckout: boolean;
   timestamp: number;
+  // Statystyki dodane przez tę turę — potrzebne do poprawnego undo
+  dartsCount?: number; // ile lotek zaliczono do statystyk (bust nie liczy ostatniej)
+  doublesAttemptedDelta?: number;
+  doublesHitDelta?: number;
 }
 
 export interface Match {
@@ -79,6 +83,36 @@ export interface Match {
   completedAt: number | null;
   turns: Turn[];
   matchType: MatchType;
+  tournamentId?: string;
+}
+
+export type SeedingMode = "rating" | "random";
+
+export interface TournamentMatch {
+  id: string;               // węzeł drabinki
+  round: number;            // 0 = pierwsza runda
+  slot: number;             // pozycja w rundzie
+  p1Id: string | null;      // playerId | null (bye / TBD)
+  p2Id: string | null;
+  legMatchIds: string[];    // rozegrane legi (wiersze Match, matchType "tournament")
+  winnerId: string | null;
+  nextMatchId: string | null; // dokąd awansuje zwycięzca
+  nextSlot: 1 | 2 | null;
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  gameMode: GameMode;       // "301" | "501"
+  legsToWin: number;        // best-of: pierwszy do N legów
+  seeding: SeedingMode;
+  status: "active" | "completed";
+  playerIds: string[];      // w kolejności seedów (S1..Sn)
+  playerNames: string[];
+  bracket: TournamentMatch[];
+  championId: string | null;
+  createdAt: number;
+  completedAt: number | null;
 }
 
 export interface H2HRecord {

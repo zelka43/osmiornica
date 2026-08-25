@@ -14,7 +14,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import { getMatchById, saveMatch, setActiveMatch, getPlayers, updatePlayer } from "@/lib/store";
+import { getMatchById, saveMatch, setActiveMatch, getPlayers, updatePlayer, subscribeToMatch } from "@/lib/store";
 import { updateH2H } from "@/lib/store";
 import { validateScore, processTurn } from "@/lib/dartLogic";
 import { getCheckout } from "@/lib/checkouts";
@@ -36,6 +36,9 @@ import PostMatchStats from "@/components/match/PostMatchStats";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import type { Match, Turn, Dart, Player } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+
+// Wrapper dla react-hooks/purity — znaczniki czasu powstają tylko w handlerach
+const now = () => Date.now();
 
 const COLORS = [
   "from-emerald-500 to-teal-600",
@@ -97,7 +100,21 @@ export default function MatchPage({
     }
     load();
 
-    // Live sync: poll for changes every 3 seconds so other devices see updates
+    // Live sync: Supabase Realtime + wolny fallback polling
+    const unsubscribe = subscribeToMatch(id, (latest) => {
+      setMatch((prev) => {
+        if (!prev) return latest;
+        if (
+          latest.turns.length !== prev.turns.length ||
+          latest.status !== prev.status ||
+          latest.currentPlayerIndex !== prev.currentPlayerIndex
+        ) {
+          return latest;
+        }
+        return prev;
+      });
+    });
+
     const pollInterval = setInterval(async () => {
       if (document.hidden) return;
       const latest = await getMatchById(id);
@@ -113,13 +130,14 @@ export default function MatchPage({
         }
         return prev;
       });
-    }, 3000);
+    }, 30000);
 
     const onFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => {
+      unsubscribe();
       clearInterval(pollInterval);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
     };
@@ -128,7 +146,11 @@ export default function MatchPage({
   const persistMatch = useCallback(
     async (updated: Match) => {
       setMatch(updated);
-      await saveMatch(updated);
+      const ok = await saveMatch(updated);
+      if (!ok) {
+        alert("Nie udało się zapisać meczu — sprawdź połączenie z internetem. Postęp może nie być widoczny na innych urządzeniach.");
+        return;
+      }
       if (updated.status === "active") {
         await setActiveMatch(updated);
       } else {
@@ -197,9 +219,14 @@ export default function MatchPage({
     }
   };
 
-  const submitScore = async () => {
+  const submitScore = async (overrideScore?: number) => {
     if (!match || match.status === "completed") return;
-    const score = inputValue === "" ? 0 : parseInt(inputValue);
+    const score =
+      overrideScore !== undefined
+        ? overrideScore
+        : inputValue === ""
+        ? 0
+        : parseInt(inputValue);
 
     if (!validateScore(score)) return;
 
@@ -238,7 +265,6 @@ export default function MatchPage({
     const currentState = match.scores[currentPlayerId];
 
     const result = processDartByDartTurn(currentState.remaining, darts);
-    const actualDartsThrown = darts.filter((d) => d.segment !== 0 || d.score === 0).length;
 
     // Count doubles attempted/hit based on remaining BEFORE each dart
     let newDoublesAttempted = currentState.doublesAttempted;
@@ -264,19 +290,25 @@ export default function MatchPage({
       remainingAfter: result.newRemaining,
       isBust: result.isBust,
       isCheckout: result.isCheckout,
-      timestamp: Date.now(),
+      timestamp: now(),
+      dartsCount: result.validDarts,
+      doublesAttemptedDelta: newDoublesAttempted - currentState.doublesAttempted,
+      doublesHitDelta: newDoublesHit - currentState.doublesHit,
     };
 
     const updatedScores = { ...match.scores };
     updatedScores[currentPlayerId] = {
       ...currentState,
       remaining: result.newRemaining,
-      dartsThrown: currentState.dartsThrown + darts.length,
+      // Bust nie liczy lotki, którą spowodował
+      dartsThrown: currentState.dartsThrown + result.validDarts,
       pointsScored: result.isBust
         ? currentState.pointsScored
         : currentState.pointsScored + turnTotal,
-      oneEighties: turnTotal === 180 ? currentState.oneEighties + 1 : currentState.oneEighties,
-      tonPlus: turnTotal >= 100 && turnTotal < 180 ? currentState.tonPlus + 1 : currentState.tonPlus,
+      oneEighties:
+        !result.isBust && turnTotal === 180 ? currentState.oneEighties + 1 : currentState.oneEighties,
+      tonPlus:
+        !result.isBust && turnTotal >= 100 && turnTotal < 180 ? currentState.tonPlus + 1 : currentState.tonPlus,
       doublesAttempted: newDoublesAttempted,
       doublesHit: newDoublesHit,
     };
@@ -291,7 +323,7 @@ export default function MatchPage({
       status = "completed";
       winnerId = currentPlayerId;
       winnerName = currentPlayerName;
-      completedAt = Date.now();
+      completedAt = now();
       nextPlayerIndex = match.currentPlayerIndex;
     }
 
@@ -376,7 +408,10 @@ export default function MatchPage({
       remainingAfter: result.newRemaining,
       isBust: result.isBust,
       isCheckout: result.isCheckout,
-      timestamp: Date.now(),
+      timestamp: now(),
+      dartsCount: 3,
+      doublesAttemptedDelta: doublesAttemptedCount,
+      doublesHitDelta: result.isCheckout ? 1 : 0,
     };
 
     const updatedScores = { ...match.scores };
@@ -387,8 +422,10 @@ export default function MatchPage({
       pointsScored: result.isBust
         ? currentState.pointsScored
         : currentState.pointsScored + score,
-      oneEighties: score === 180 ? currentState.oneEighties + 1 : currentState.oneEighties,
-      tonPlus: score >= 100 && score < 180 ? currentState.tonPlus + 1 : currentState.tonPlus,
+      oneEighties:
+        !result.isBust && score === 180 ? currentState.oneEighties + 1 : currentState.oneEighties,
+      tonPlus:
+        !result.isBust && score >= 100 && score < 180 ? currentState.tonPlus + 1 : currentState.tonPlus,
       doublesAttempted: currentState.doublesAttempted + doublesAttemptedCount,
       doublesHit: result.isCheckout
         ? currentState.doublesHit + 1
@@ -405,7 +442,7 @@ export default function MatchPage({
       status = "completed";
       winnerId = currentPlayerId;
       winnerName = currentPlayerName;
-      completedAt = Date.now();
+      completedAt = now();
       nextPlayerIndex = match.currentPlayerIndex;
     }
 
@@ -449,7 +486,8 @@ export default function MatchPage({
   };
 
   const finalizeMatch = async (completedMatch: Match) => {
-    if (completedMatch.matchType === "friendly") return;
+    // Tylko mecze rankingowe wpływają na statystyki/H2H (friendly i turniejowe — nie).
+    if (completedMatch.matchType !== "ranked") return;
 
     const allPlayers = await getPlayers();
 
@@ -512,7 +550,7 @@ export default function MatchPage({
       scores,
       winnerId: null,
       winnerName: null,
-      createdAt: Date.now(),
+      createdAt: now(),
       completedAt: null,
       turns: [],
       matchType: match.matchType,
@@ -527,35 +565,35 @@ export default function MatchPage({
 
     const lastTurn = match.turns[match.turns.length - 1];
     const prevState = match.scores[lastTurn.playerId];
+    if (!prevState) return;
 
-    const restoredRemaining = lastTurn.isBust
-      ? prevState.remaining
-      : prevState.remaining + lastTurn.turnTotal;
+    // Cofnij dokładnie te wartości, które tura dodała (fallback dla starych danych)
+    const restoredDarts =
+      lastTurn.dartsCount ?? (lastTurn.darts.length > 0 ? lastTurn.darts.length : 3);
+    const restoredDoublesAttempted = lastTurn.doublesAttemptedDelta ?? 0;
+    const restoredDoublesHit = lastTurn.doublesHitDelta ?? (lastTurn.isCheckout ? 1 : 0);
 
     const updatedScores = { ...match.scores };
     updatedScores[lastTurn.playerId] = {
       ...prevState,
-      remaining: lastTurn.remainingAfter + lastTurn.turnTotal,
-      dartsThrown: Math.max(0, prevState.dartsThrown - 3),
+      remaining: lastTurn.isBust
+        ? prevState.remaining
+        : lastTurn.remainingAfter + lastTurn.turnTotal,
+      dartsThrown: Math.max(0, prevState.dartsThrown - restoredDarts),
       pointsScored: lastTurn.isBust
         ? prevState.pointsScored
         : prevState.pointsScored - lastTurn.turnTotal,
       oneEighties:
-        lastTurn.turnTotal === 180
+        !lastTurn.isBust && lastTurn.turnTotal === 180
           ? prevState.oneEighties - 1
           : prevState.oneEighties,
       tonPlus:
-        lastTurn.turnTotal >= 100 && lastTurn.turnTotal < 180
+        !lastTurn.isBust && lastTurn.turnTotal >= 100 && lastTurn.turnTotal < 180
           ? prevState.tonPlus - 1
           : prevState.tonPlus,
+      doublesAttempted: Math.max(0, prevState.doublesAttempted - restoredDoublesAttempted),
+      doublesHit: Math.max(0, prevState.doublesHit - restoredDoublesHit),
     };
-
-    // Restore remaining correctly for bust
-    if (lastTurn.isBust) {
-      // remaining didn't change on bust, so just keep it
-    } else {
-      updatedScores[lastTurn.playerId].remaining = lastTurn.remainingAfter + lastTurn.turnTotal;
-    }
 
     // Find previous player index
     const prevPlayerIdx = match.playerIds.indexOf(lastTurn.playerId);
@@ -913,8 +951,8 @@ export default function MatchPage({
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
-                    setInputValue("0");
-                    handleNumpad("OK");
+                    setInputValue("");
+                    submitScore(0);
                   }}
                   className="col-span-2 h-14 sm:h-16 rounded-xl font-bold text-sm bg-surface-light text-neon-red hover:bg-neon-red/10 transition-all"
                 >
@@ -948,22 +986,35 @@ export default function MatchPage({
             <BarChart3 size={18} />
             Statystyki meczu
           </button>
-          <div className="flex gap-3">
+          {match.tournamentId ? (
             <button
-              onClick={() => router.push("/")}
-              className="flex-1 glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium"
+              onClick={async () => {
+                await setActiveMatch(null);
+                router.push(`/tournament/${match.tournamentId}`);
+              }}
+              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-green glow-green"
             >
-              <Home size={18} />
-              Strona główna
+              <Trophy size={18} />
+              Powrót do turnieju
             </button>
-            <button
-              onClick={() => router.push("/stats")}
-              className="flex-1 glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-green"
-            >
-              <BarChart3 size={18} />
-              Statystyki
-            </button>
-          </div>
+          ) : (
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push("/")}
+                className="flex-1 glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Home size={18} />
+                Strona główna
+              </button>
+              <button
+                onClick={() => router.push("/stats")}
+                className="flex-1 glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-green"
+              >
+                <BarChart3 size={18} />
+                Statystyki
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1039,7 +1090,7 @@ export default function MatchPage({
               <PostMatchStats
                 match={match}
                 onClose={() => setShowWinModal(false)}
-                onRematch={handleRematch}
+                onRematch={match.tournamentId ? undefined : handleRematch}
               />
             </motion.div>
           </motion.div>
