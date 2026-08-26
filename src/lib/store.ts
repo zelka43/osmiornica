@@ -61,7 +61,7 @@ export async function getPlayerById(id: string): Promise<Player | undefined> {
 
 // Kolumny meczu bez historii rzutów — do list (dashboard, historia, drabinki)
 const MATCH_LIST_COLUMNS =
-  "id, game_mode, starting_score, player_ids, player_names, status, current_player_index, scores, winner_id, winner_name, created_at, completed_at, match_type, tournament_id";
+  "id, game_mode, starting_score, player_ids, player_names, status, current_player_index, scores, winner_id, winner_name, created_at, completed_at, match_type, tournament_id, duel_id, legs_target, bull_winner";
 
 export async function getMatches(
   options?: { withTurns?: boolean }
@@ -584,6 +584,9 @@ function mapMatch(row: any): Match {
     turns: row.turns ?? [],
     matchType: row.match_type ?? "ranked",
     tournamentId: row.tournament_id ?? undefined,
+    duelId: row.duel_id ?? undefined,
+    legsTarget: row.legs_target ?? undefined,
+    bullWinnerId: row.bull_winner ?? null,
   };
 }
 
@@ -604,6 +607,9 @@ function toMatchRow(match: Match) {
     turns: match.turns,
     match_type: match.matchType,
     tournament_id: match.tournamentId ?? null,
+    duel_id: match.duelId ?? null,
+    legs_target: match.legsTarget ?? null,
+    bull_winner: match.bullWinnerId ?? null,
   };
 }
 

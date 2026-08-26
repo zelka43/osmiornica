@@ -101,8 +101,11 @@ export default function MatchHistoryPage() {
     );
   }
 
-  // Legi turniejowe nie pojawiają się w historii meczów
-  const nonTournament = matches.filter((m) => (m.matchType ?? "ranked") !== "tournament");
+  // Legi turniejowe i pojedynki nie pojawiają się w historii meczów
+  const nonTournament = matches.filter((m) => {
+    const mt = m.matchType ?? "ranked";
+    return mt !== "tournament" && mt !== "duel";
+  });
 
   const completedMatches = [...nonTournament]
     .filter((m) => m.status === "completed")

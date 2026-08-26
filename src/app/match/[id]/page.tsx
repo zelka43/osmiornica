@@ -14,6 +14,7 @@ import {
   Maximize2,
   Minimize2,
   Target,
+  Swords,
 } from "lucide-react";
 import { getMatchById, saveMatch, setActiveMatch, getPlayers, updatePlayer, subscribeToMatch, getTournamentById, getMatches, saveTournament } from "@/lib/store";
 import { updateH2H } from "@/lib/store";
@@ -88,36 +89,56 @@ export default function MatchPage({
   const [bullDoneFor, setBullDoneFor] = useState<string | null>(null);
   const [legInfo, setLegInfo] = useState<{ mid: string; legNo: number; scoreLine: string } | null>(null);
 
-  // Dane meczu turniejowego: numer lega + stan w meczu + ewentualny rzut na bulla
+  // Dane meczu turniejowego/pojedynku: numer lega + stan serii + ewentualny rzut na bulla
   // (bull rozstrzyga tylko 1. lega — kolejne startują na przemian)
   useEffect(() => {
     const m = match;
-    if (!m || m.matchType !== "tournament" || !m.tournamentId) return;
+    if (!m || (m.matchType !== "tournament" && m.matchType !== "duel")) return;
     let cancelled = false;
     void (async () => {
-      const t = await getTournamentById(m.tournamentId!);
-      if (!t || cancelled) return;
-      const allLegs = (await getMatches({ withTurns: false })).filter(
-        (x) => x.tournamentId === t.id
-      );
-      const node = t.bracket.find((n) => n.legMatchIds.includes(m.id));
-      if (!node || cancelled) return;
-
-      const wins: Record<string, number> = {};
-      for (const lid of node.legMatchIds) {
-        const lm = allLegs.find((x) => x.id === lid);
-        if (lm && lm.status === "completed" && lm.winnerId) {
-          wins[lm.winnerId] = (wins[lm.winnerId] ?? 0) + 1;
+      let scoreLine = "0–0";
+      let legNo = 1;
+      let bullDecided = true;
+      if (m.matchType === "tournament" && m.tournamentId) {
+        const t = await getTournamentById(m.tournamentId);
+        if (!t || cancelled) return;
+        const allLegs = (await getMatches({ withTurns: false })).filter(
+          (x) => x.tournamentId === t.id
+        );
+        const node = t.bracket.find((n) => n.legMatchIds.includes(m.id));
+        if (!node || cancelled) return;
+        legNo = node.legMatchIds.length;
+        bullDecided = node.bullWinnerId != null;
+        const wins: Record<string, number> = {};
+        for (const lid of node.legMatchIds) {
+          const lm = allLegs.find((x) => x.id === lid);
+          if (lm && lm.status === "completed" && lm.winnerId) {
+            wins[lm.winnerId] = (wins[lm.winnerId] ?? 0) + 1;
+          }
         }
+        scoreLine = m.playerIds.map((pid) => wins[pid] ?? 0).join("–");
+      } else if (m.duelId) {
+        const allLegs = (await getMatches({ withTurns: false }))
+          .filter((x) => x.duelId === m.duelId)
+          .sort((a, b) => a.createdAt - b.createdAt);
+        legNo = allLegs.length;
+        bullDecided = allLegs.some((l) => l.bullWinnerId != null);
+        const wins: Record<string, number> = {};
+        for (const lm of allLegs) {
+          if (lm.status === "completed" && lm.winnerId) {
+            wins[lm.winnerId] = (wins[lm.winnerId] ?? 0) + 1;
+          }
+        }
+        scoreLine = m.playerIds.map((pid) => wins[pid] ?? 0).join("–");
       }
-      const scoreLine = m.playerIds.map((pid) => wins[pid] ?? 0).join("–");
-      setLegInfo({ mid: m.id, legNo: node.legMatchIds.length, scoreLine });
+      if (cancelled) return;
+      setLegInfo({ mid: m.id, legNo, scoreLine });
 
       if (
         m.status === "active" &&
         m.turns.length === 0 &&
         bullDoneFor !== m.id &&
-        node.bullWinnerId == null
+        !bullDecided
       ) {
         setBull({
           p1Name: m.playerNames[0],
@@ -541,23 +562,34 @@ export default function MatchPage({
   };
 
   const pickBullWinner = async (playerIndex: number) => {
-    if (!match?.tournamentId) return;
+    if (!match) return;
     const pid = match.playerIds[playerIndex];
     setBullDoneFor(match.id);
     setBull(null);
-    await persistMatch({ ...match, currentPlayerIndex: playerIndex });
-    // Zapamiętaj w węźle drabinki — od tego zależy naprzemienność startów
-    const t = await getTournamentById(match.tournamentId);
-    if (!t) return;
-    const updatedBracket = t.bracket.map((n) =>
-      n.legMatchIds.includes(match.id) ? { ...n, bullWinnerId: pid } : n
-    );
-    await saveTournament({ ...t, bracket: updatedBracket });
+    const updated = { ...match, currentPlayerIndex: playerIndex };
+    if (match.matchType === "duel") {
+      // Pojedynki: bull zapisany bezpośrednio na legu
+      updated.bullWinnerId = pid;
+      await persistMatch(updated);
+    } else {
+      await persistMatch(updated);
+      // Turnieje: bull zapamiętywany w węźle drabinki
+      if (!match.tournamentId) return;
+      const t = await getTournamentById(match.tournamentId);
+      if (!t) return;
+      const updatedBracket = t.bracket.map((n) =>
+        n.legMatchIds.includes(match.id) ? { ...n, bullWinnerId: pid } : n
+      );
+      await saveTournament({ ...t, bracket: updatedBracket });
+    }
   };
 
-  // Po zakończonym legu turniejowym: albo węzeł rozstrzygnięty (statystyki + powrót),
-  // albo automatyczny kolejny leg — gracze zostają w widoku meczu.
-  const chainOrFinishTournamentLeg = async (completedLeg: Match): Promise<boolean> => {
+  // Po zakończonym legu serii (turniej/pojedynek): albo seria rozstrzygnięta
+  // (statystyki + powrót), albo automatyczny kolejny leg w tym samym widoku.
+  const chainOrFinishSeriesLeg = async (completedLeg: Match): Promise<boolean> => {
+    if (completedLeg.matchType === "duel") {
+      return chainOrFinishDuel(completedLeg);
+    }
     const tid = completedLeg.tournamentId;
     if (!tid) return false;
     const t = await getTournamentById(tid);
@@ -620,9 +652,68 @@ export default function MatchPage({
     return true;
   };
 
+  // Pojedynek: kolejny leg dopóki nikt nie osiągnął legsTarget
+  const chainOrFinishDuel = async (completedLeg: Match): Promise<boolean> => {
+    const duelId = completedLeg.duelId;
+    if (!duelId) return false;
+    const target = completedLeg.legsTarget ?? 1;
+
+    const allLegs = (await getMatches({ withTurns: false }))
+      .filter((m) => m.duelId === duelId)
+      .sort((a, b) => a.createdAt - b.createdAt);
+    const wins: Record<string, number> = {};
+    for (const lm of allLegs) {
+      if (lm.status === "completed" && lm.winnerId) {
+        wins[lm.winnerId] = (wins[lm.winnerId] ?? 0) + 1;
+      }
+    }
+    const [p1, p2] = completedLeg.playerIds;
+    if ((wins[p1] ?? 0) >= target || (wins[p2] ?? 0) >= target) return false;
+
+    // Kolejny leg — naprzemiennie względem zwycięzcy bulla
+    const legNumber = allLegs.length + 1;
+    let starterIdx = 0;
+    const bullWinner = completedLeg.bullWinnerId ?? allLegs.find((l) => l.bullWinnerId)?.bullWinnerId;
+    if (bullWinner) {
+      const bullIdx = completedLeg.playerIds.indexOf(bullWinner);
+      starterIdx = legNumber % 2 === 1 ? Math.max(0, bullIdx) : 1 - Math.max(0, bullIdx);
+    }
+
+    const scores: Match["scores"] = {};
+    for (const pid of completedLeg.playerIds) {
+      scores[pid] = createInitialMatchState(completedLeg.startingScore);
+    }
+    const nextLeg: Match = {
+      id: uuidv4(),
+      gameMode: completedLeg.gameMode,
+      startingScore: completedLeg.startingScore,
+      playerIds: completedLeg.playerIds,
+      playerNames: completedLeg.playerNames,
+      status: "active",
+      currentPlayerIndex: starterIdx,
+      scores,
+      winnerId: null,
+      winnerName: null,
+      createdAt: now(),
+      completedAt: null,
+      turns: [],
+      matchType: "duel",
+      duelId,
+      legsTarget: target,
+      bullWinnerId: bullWinner ?? null,
+    };
+    await saveMatch(nextLeg);
+    await setActiveMatch(nextLeg);
+    router.replace(`/match/${nextLeg.id}`);
+    return true;
+  };
+
   const afterCheckout = async (completed: Match): Promise<void> => {
-    if (completed.matchType === "tournament" && completed.tournamentId) {
-      const chained = await chainOrFinishTournamentLeg(completed);
+    if (
+      (completed.matchType === "tournament" && completed.tournamentId) ||
+      completed.matchType === "duel"
+    ) {
+      const chained = await chainOrFinishSeriesLeg(completed);
       if (chained) return;
     }
     setTimeout(() => setShowWinModal(true), 500);
@@ -701,6 +792,37 @@ export default function MatchPage({
     await saveMatch(newMatch);
     await setActiveMatch(newMatch);
     router.push(`/match/${newMatch.id}`);
+  };
+
+  // Rewanż w pojedynku: nowa seria, bull od nowa
+  const handleDuelRematch = async () => {
+    if (!match) return;
+    const scores: Match["scores"] = {};
+    for (const pid of match.playerIds) {
+      scores[pid] = createInitialMatchState(match.startingScore);
+    }
+    const nextLeg: Match = {
+      id: uuidv4(),
+      gameMode: match.gameMode,
+      startingScore: match.startingScore,
+      playerIds: match.playerIds,
+      playerNames: match.playerNames,
+      status: "active",
+      currentPlayerIndex: 0,
+      scores,
+      winnerId: null,
+      winnerName: null,
+      createdAt: now(),
+      completedAt: null,
+      turns: [],
+      matchType: "duel",
+      duelId: uuidv4(),
+      legsTarget: match.legsTarget ?? 1,
+      bullWinnerId: null,
+    };
+    await saveMatch(nextLeg);
+    await setActiveMatch(nextLeg);
+    router.replace(`/match/${nextLeg.id}`);
   };
 
   const undoLastTurn = async () => {
@@ -1146,6 +1268,17 @@ export default function MatchPage({
               <Trophy size={18} />
               Powrót do turnieju
             </button>
+          ) : match.matchType === "duel" ? (
+            <button
+              onClick={async () => {
+                await setActiveMatch(null);
+                router.push("/duel");
+              }}
+              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-red"
+            >
+              <Swords size={18} />
+              Powrót do pojedynków
+            </button>
           ) : (
             <div className="flex gap-3">
               <button
@@ -1290,7 +1423,13 @@ export default function MatchPage({
               <PostMatchStats
                 match={match}
                 onClose={() => setShowWinModal(false)}
-                onRematch={match.tournamentId ? undefined : handleRematch}
+                onRematch={
+                  match.tournamentId
+                    ? undefined
+                    : match.matchType === "duel"
+                    ? handleDuelRematch
+                    : handleRematch
+                }
               />
             </motion.div>
           </motion.div>

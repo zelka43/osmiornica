@@ -68,8 +68,11 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  // Legi turniejowe to osobny tryb — nie pokazujemy ich na dashboardzie
-  const nonTournamentMatches = matches.filter((m) => (m.matchType ?? "ranked") !== "tournament");
+  // Legi turniejowe i pojedynki to osobne tryby — nie pokazujemy ich na dashboardzie
+  const nonTournamentMatches = matches.filter((m) => {
+    const mt = m.matchType ?? "ranked";
+    return mt !== "tournament" && mt !== "duel";
+  });
 
   const recentMatches = [...nonTournamentMatches]
     .sort((a, b) => b.createdAt - a.createdAt)

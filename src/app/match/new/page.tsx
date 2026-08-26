@@ -12,6 +12,7 @@ import {
   Users,
   Shuffle,
   CircleDot,
+  Swords,
   BarChart2,
 } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
@@ -48,6 +49,23 @@ export default function NewGamePage() {
             <div className="flex-1 text-left">
               <p className="font-bold text-base">Mecz rankingowy</p>
               <p className="text-sm text-muted">501 / 301 · liczy się do statystyk</p>
+            </div>
+            <ChevronRight size={18} className="text-muted" />
+          </motion.button>
+
+          {/* Pojedynek 1v1 */}
+          <p className="text-xs font-bold text-muted uppercase tracking-widest mb-3">Pojedynek</p>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push("/duel")}
+            className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-4 flex items-center gap-4 mb-8 transition-all duration-200"
+          >
+            <div className="w-11 h-11 rounded-xl bg-neon-red/10 flex items-center justify-center shrink-0">
+              <Swords className="text-neon-red" size={22} />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-bold text-base">Pojedynek 1v1</p>
+              <p className="text-sm text-muted">Do N wygranych legów · rzut na bulla · osobna tabela</p>
             </div>
             <ChevronRight size={18} className="text-muted" />
           </motion.button>

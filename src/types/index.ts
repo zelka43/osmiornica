@@ -34,7 +34,7 @@ export const emptyStats: PlayerStats = {
 
 export type GameMode = "501" | "301";
 
-export type MatchType = "ranked" | "friendly" | "tournament";
+export type MatchType = "ranked" | "friendly" | "tournament" | "duel";
 
 export interface PlayerMatchState {
   remaining: number;
@@ -84,6 +84,10 @@ export interface Match {
   turns: Turn[];
   matchType: MatchType;
   tournamentId?: string;
+  // Tryb pojedynków (1v1)
+  duelId?: string;        // wspólny identyfikator serii legów
+  legsTarget?: number;    // do ilu wygranych legów
+  bullWinnerId?: string | null; // zwycięzca rzutu na bulla (1. leg)
 }
 
 export type SeedingMode = "rating" | "random";
