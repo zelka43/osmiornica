@@ -162,6 +162,13 @@ export async function deleteTournament(id: string): Promise<boolean> {
   return !error;
 }
 
+export async function deleteDuel(duelId: string): Promise<boolean> {
+  // Usuń wszystkie legi danej serii pojedynku
+  const { error } = await supabase.from("matches").delete().eq("duel_id", duelId);
+  if (error) console.error("deleteDuel error:", error);
+  return !error;
+}
+
 // ─── H2H ───
 
 function getH2HKey(p1: string, p2: string): string {

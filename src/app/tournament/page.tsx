@@ -164,8 +164,8 @@ export default function TournamentListPage() {
                 <h2 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
                   Do ilu wygranych legów (best-of {legsToWin * 2 - 1})
                 </h2>
-                <div className="grid grid-cols-5 gap-2">
-                  {[1, 2, 3, 4, 5].map((n) => (
+                <div className="grid grid-cols-6 gap-1.5">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
                     <button
                       key={n}
                       onClick={() => setLegsToWin(n)}

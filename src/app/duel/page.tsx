@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Swords, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
+import { Swords, ChevronLeft, ChevronRight, BarChart3, Trash2 } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
-import { getPlayers, getMatches, saveMatch, setActiveMatch } from "@/lib/store";
+import { getPlayers, getMatches, saveMatch, setActiveMatch, deleteDuel, getActiveMatch } from "@/lib/store";
 import { computeDuelTable, groupDuels } from "@/lib/duel";
 import { createInitialMatchState } from "@/lib/dartLogic";
 import type { Player, Match, GameMode } from "@/types";
@@ -91,6 +91,15 @@ export default function DuelPage() {
     router.push(`/match/${leg.id}`);
   };
 
+  const handleDelete = async (duelId: string) => {
+    if (!confirm("Usunąć pojedynek i wszystkie jego legi?")) return;
+    // Wyczyść aktywny mecz, jeśli należy do tej serii
+    const active = await getActiveMatch();
+    if (active?.duelId === duelId) await setActiveMatch(null);
+    await deleteDuel(duelId);
+    setMatches((prev) => prev.filter((m) => m.duelId !== duelId));
+  };
+
   if (!mounted) {
     return (
       <div className="flex flex-col min-h-[100dvh]">
@@ -160,8 +169,8 @@ export default function DuelPage() {
                 <h2 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
                   Do ilu wygranych legów (best-of {legsTarget * 2 - 1})
                 </h2>
-                <div className="grid grid-cols-5 gap-2">
-                  {[1, 2, 3, 4, 5].map((n) => (
+                <div className="grid grid-cols-6 gap-1.5">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
                     <button
                       key={n}
                       onClick={() => setLegsTarget(n)}
@@ -313,7 +322,7 @@ export default function DuelPage() {
               <p className="text-xs font-bold text-muted uppercase tracking-widest mb-1">Rozegrane pojedynki</p>
               {duelSummaries.slice(0, 10).map((s) => (
                 <div key={s.duelId} className="glass rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-mono font-bold text-sm truncate">
                       <span className={s.winnerId === s.p1Id ? "text-neon-green" : ""}>{s.p1Name}</span>
                       {" "}{"—"}{" "}
@@ -334,6 +343,13 @@ export default function DuelPage() {
                         W toku
                       </span>
                     )}
+                    <button
+                      onClick={() => handleDelete(s.duelId)}
+                      className="text-muted hover:text-neon-red p-1"
+                      aria-label="Usuń pojedynek"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               ))}

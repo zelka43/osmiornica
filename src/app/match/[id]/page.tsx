@@ -87,7 +87,7 @@ export default function MatchPage({
   } | null>(null);
   const [bull, setBull] = useState<{ p1Name: string; p2Name: string; scoreLine: string | null } | null>(null);
   const [bullDoneFor, setBullDoneFor] = useState<string | null>(null);
-  const [legInfo, setLegInfo] = useState<{ mid: string; legNo: number; scoreLine: string } | null>(null);
+  const [legInfo, setLegInfo] = useState<{ mid: string; legNo: number; scoreLine: string; target: number } | null>(null);
 
   // Dane meczu turniejowego/pojedynku: numer lega + stan serii + ewentualny rzut na bulla
   // (bull rozstrzyga tylko 1. lega — kolejne startują na przemian)
@@ -98,6 +98,7 @@ export default function MatchPage({
     void (async () => {
       let scoreLine = "0–0";
       let legNo = 1;
+      let target = 1;
       let bullDecided = true;
       if (m.matchType === "tournament" && m.tournamentId) {
         const t = await getTournamentById(m.tournamentId);
@@ -108,6 +109,7 @@ export default function MatchPage({
         const node = t.bracket.find((n) => n.legMatchIds.includes(m.id));
         if (!node || cancelled) return;
         legNo = node.legMatchIds.length;
+        target = t.legsToWin;
         bullDecided = node.bullWinnerId != null;
         const wins: Record<string, number> = {};
         for (const lid of node.legMatchIds) {
@@ -122,6 +124,7 @@ export default function MatchPage({
           .filter((x) => x.duelId === m.duelId)
           .sort((a, b) => a.createdAt - b.createdAt);
         legNo = allLegs.length;
+        target = m.legsTarget ?? 1;
         bullDecided = allLegs.some((l) => l.bullWinnerId != null);
         const wins: Record<string, number> = {};
         for (const lm of allLegs) {
@@ -132,7 +135,7 @@ export default function MatchPage({
         scoreLine = m.playerIds.map((pid) => wins[pid] ?? 0).join("–");
       }
       if (cancelled) return;
-      setLegInfo({ mid: m.id, legNo, scoreLine });
+      setLegInfo({ mid: m.id, legNo, scoreLine, target });
 
       if (
         m.status === "active" &&
@@ -222,15 +225,14 @@ export default function MatchPage({
   const persistMatch = useCallback(
     async (updated: Match) => {
       setMatch(updated);
-      const ok = await saveMatch(updated);
+      const [ok] = await Promise.all([
+        saveMatch(updated),
+        updated.status === "active"
+          ? setActiveMatch(updated)
+          : setActiveMatch(null),
+      ]);
       if (!ok) {
         alert("Nie udało się zapisać meczu — sprawdź połączenie z internetem. Postęp może nie być widoczny na innych urządzeniach.");
-        return;
-      }
-      if (updated.status === "active") {
-        await setActiveMatch(updated);
-      } else {
-        await setActiveMatch(null);
       }
     },
     []
@@ -645,9 +647,11 @@ export default function MatchPage({
     const updatedBracket = recomputed.bracket.map((n) =>
       n.id === node.id ? { ...n, legMatchIds: [...n.legMatchIds, nextLeg.id] } : n
     );
-    await saveTournament({ ...recomputed, bracket: updatedBracket });
-    await saveMatch(nextLeg);
-    await setActiveMatch(nextLeg);
+    await Promise.all([
+      saveTournament({ ...recomputed, bracket: updatedBracket }),
+      saveMatch(nextLeg),
+      setActiveMatch(nextLeg),
+    ]);
     router.replace(`/match/${nextLeg.id}`);
     return true;
   };
@@ -702,8 +706,7 @@ export default function MatchPage({
       legsTarget: target,
       bullWinnerId: bullWinner ?? null,
     };
-    await saveMatch(nextLeg);
-    await setActiveMatch(nextLeg);
+    await Promise.all([saveMatch(nextLeg), setActiveMatch(nextLeg)]);
     router.replace(`/match/${nextLeg.id}`);
     return true;
   };
@@ -887,10 +890,14 @@ export default function MatchPage({
   const currentRemaining = match.scores[currentPlayerId]?.remaining ?? 0;
   const checkoutHint = currentRemaining <= 170 ? getCheckout(currentRemaining) : null;
 
-  // W turnieju: "Leg 2 · 1–0" zamiast numeru rundy
+  // W turnieju/pojedynku: "Leg 2 · 1–0 · do 2" zamiast numeru rundy
   const legBadge =
-    match.matchType === "tournament" && legInfo && legInfo.mid === match.id
-      ? `Leg ${legInfo.legNo}${legInfo.scoreLine !== "0–0" ? ` · ${legInfo.scoreLine}` : ""}`
+    match.matchType === "tournament" || match.matchType === "duel"
+      ? legInfo && legInfo.mid === match.id
+        ? `Leg ${legInfo.legNo}${
+            legInfo.scoreLine !== "0–0" ? ` · ${legInfo.scoreLine}` : ""
+          } · do ${legInfo.target}`
+        : null
       : null;
 
   // Get last few turns for history
