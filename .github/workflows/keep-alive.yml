@@ -1,0 +1,22 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Run every 3 days at 10:00 UTC
+    - cron: '0 10 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database via REST API
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X GET "https://rqoqxeycxhdoialeamyx.supabase.co/rest/v1/players?select=id&limit=1" \
+            -H "apikey: sb_publishable_a8cxk2afr28wF0znvaVOZw_B8OM94xw" \
+            -H "Authorization: Bearer sb_publishable_a8cxk2afr28wF0znvaVOZw_B8OM94xw")
+          echo "Supabase HTTP response: $response"
+          if [ "$response" -ne 200 ]; then
+            echo "Failed to ping Supabase!"
+            exit 1
+          fi

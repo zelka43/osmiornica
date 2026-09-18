@@ -116,6 +116,9 @@ Turniejowe/duel legi mają `matchType !== "ranked"` — stary kod bez filtra to 
 - `.env.local` (gitignored): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - Deploy: push do `main` → Vercel. Zmiany schematu bazy NIE idą przez deploy —
   ręczny SQL w Supabase (patrz wyżej).
+- **Keep-alive Supabase (anty-pause)**: endpoint `/api/keep-alive` odpytuje bazę.
+  Zarządzany przez Vercel Cron (`vercel.json`, codziennie) oraz GitHub Actions
+  (`.github/workflows/keep-alive.yml`, co 3 dni), dzięki czemu darmowe Supabase nigdy nie zasypia po 7 dniach.
 - Firebase został usunięty (martwy kod) — nie przywracać.
 
 ## Pomysły na przyszłość (zebrane od użytkownika)
