@@ -109,12 +109,11 @@ export default function H2HPage() {
     getMatchesBetweenPlayers(player1Id, player2Id).then(setFetchedMatches);
   }, [player1Id, player2Id]);
 
-  const allSharedMatches = selectionValid ? fetchedMatches : [];
-
   const filteredMatches = useMemo(() => {
+    const allSharedMatches = selectionValid ? fetchedMatches : [];
     if (period === "all") return allSharedMatches;
     return allSharedMatches.filter((m) => m.createdAt >= currentRange.start && m.createdAt < currentRange.end);
-  }, [allSharedMatches, period, currentRange]);
+  }, [selectionValid, fetchedMatches, period, currentRange]);
 
   const p1Stats = useMemo(
     () => (player1Id ? computeH2HStats(player1Id, filteredMatches) : null),

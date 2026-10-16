@@ -35,7 +35,8 @@ export default function PostMatchStats({ match, allPlayerIds, onClose, onRematch
       // First 9 darts average (first 3 turns)
       const first3Turns = match.turns.filter((t) => t.playerId === playerId).slice(0, 3);
       const first9Points = first3Turns.reduce((sum, t) => sum + (t.isBust ? 0 : t.turnTotal), 0);
-      const first9Darts = first3Turns.reduce((sum, t) => sum + t.darts.length, 0);
+      // Tryb szybki nie zapisuje lotek — tura to 3 lotki
+      const first9Darts = first3Turns.reduce((sum, t) => sum + (t.darts.length > 0 ? t.darts.length : 3), 0);
       const first9Avg = first9Darts > 0 ? (first9Points / first9Darts) * 3 : 0;
 
       const colorIdx = allPlayerIds

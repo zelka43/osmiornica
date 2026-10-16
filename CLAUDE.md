@@ -10,7 +10,8 @@ Język UI: **polski**. Repo: `github.com/zelka43/osmiornica`, push do `main` = d
 ```bash
 npm run dev     # serwer dev
 npm run build   # build + typecheck (obowiązkowo przed commitem)
-npm run lint    # eslint (musi być 0 errors; warnings istniejące: img, unused vars)
+npm run lint    # eslint (musi być 0 errors; warnings istniejące: <img> awatarów, `rank` w players)
+npm test        # vitest — testy czystej logiki (src/**/*.test.ts)
 ```
 
 ## Stack
@@ -36,7 +37,12 @@ src/app/
   dev/page.tsx              panel admina (hasło "dart2024" w kodzie — tylko kosmetyka)
 src/lib/
   store.ts                  JEDYNA warstwa dostępu do Supabase (CRUD + mapowanie pól)
-  dartLogic.ts              zasady 501/301: bust (<0, ==1, 0 bez double-out), validDarts
+  dartLogic.ts              zasady 501/301: bust (<0, ==1, 0 bez double-out), validDarts,
+                            niemożliwe sumy (163,166…), bogey numbers, strefa doubli
+  matchEngine.ts            CZYSTA logika tury: applyQuickTurn/applyDetailedTurn/undoLastTurn,
+                            createMatch, seriesStarterIndex, countLegWins (+ matchEngine.test.ts)
+  matchCache.ts             cache IndexedDB meczów ranked+completed z rzutami (staty/karty)
+  useWakeLock.ts            ekran nie gaśnie w trakcie meczu
   checkouts.ts              tabela zakończeń 2–170
   statsCalculator.ts        statystyki, RTG, medale, osiągnięcia, tabela turniejowa
   tournament.ts             generowanie drabinki, applyLegResult, isPlayable
@@ -91,21 +97,40 @@ Turniejowe/duel legi mają `matchType !== "ranked"` — stary kod bez filtra to 
 
 - **Mapowanie pól**: DB snake_case ↔ TS camelCase wyłącznie przez `mapX/toXRow`
   w `store.ts`. Nowa kolumna = aktualizacja mapowania ORAZ `MATCH_LIST_COLUMNS`.
-- **Lekkie zapytania**: listy (dashboard, historia, drabinka) używają
-  `getMatches({ withTurns: false })` — bez ciężkiego JSONB `turns`. Pełne dane
-  tylko tam, gdzie liczone są szczegóły z rzutów.
+- **Lekkie zapytania**: listy (dashboard, historia) używają
+  `getMatches({ withTurns: false })` — bez ciężkiego JSONB `turns`. Legi jednej serii:
+  `getSeriesLegs({ tournamentId } | { duelId })`. Staty/karty: `getRankedCompletedMatches()`
+  (matchCache — dociąga tylko nowe/zmienione mecze po odcisku completed_at+scores).
+  `getMatches` pobiera stronami po 1000 (limit PostgREST).
 - **Błędy nie są połykane**: mutacje zwracają `boolean`/`null`; krytyczne miejsca
   (persistMatch, addPlayer) informują użytkownika. Czytajace zwracają `[]`+console.error.
-- **Undo korzysta z delt tury**: `Turn.dartsCount`, `doublesAttemptedDelta`,
-  `doublesHitDelta` (fallback dla starych danych: darts.length||3, isCheckout?1:0).
-  Bust nie liczy lotki kończącej ani 180/ton+. Zmieniając logikę tury — zaktualizuj undo.
+- **Logika tury tylko w `matchEngine.ts`** (strona meczu woła te funkcje). Undo korzysta
+  z delt tury: `Turn.dartsCount`, `doublesAttemptedDelta`, `doublesHitDelta` (fallback dla
+  starych danych: darts.length||3, isCheckout?1:0). Bust nie liczy lotki kończącej ani
+  180/ton+. Zmieniając logikę tury — zaktualizuj undo i testy.
+- **Cofanie checkoutu**: możliwe tylko dla checkoutu wpisanego w tej sesji. Ranked →
+  `recalculateAllPlayerStats()` (statystyki i H2H były już zapisane). Seria (turniej/pojedynek)
+  → modal „Leg dla X: Cofnij / Dalej” przed utworzeniem kolejnego lega; „Kontynuuj serię”
+  na zakończonym legu nie tworzy duplikatu, jeśli następny leg już istnieje.
+- **Tryb szybki**: przy każdym checkoucie pytamy o próby na double (min. 1 — CO% ≤ 100%).
+  Pusty OK nic nie robi (0 = NO SCORE). Blokada 600 ms przeciw podwójnemu tapnięciu.
+- **Zapis meczu**: `persistMatch` kolejkuje zapisy (kolejność w bazie = kolejność tur).
+  Przy błędzie stan trafia do localStorage `dart_unsaved_match`, baner „Brak połączenia”,
+  ponawianie co 5 s / po `online`. Realtime ignoruje echo własnych zapisów (odcisk stanu,
+  15 s) i zmiany zdalne, gdy dla tego meczu czeka niezapisany stan.
+- **Statystyki po checkoucie** (`finalizeMatch`) liczą się dopiero po UDANYM zapisie meczu
+  (klucz `dart_pending_finalize`) — także gdy zapis przejdzie później, po odzyskaniu sieci.
+- **`recalculateAllPlayerStats`** liczy H2H jak `finalizeMatch`: zwycięzca vs każdy przegrany
+  (także mecze 3–4 osobowe), bez gości. Tabeli `h2h_records` nie czyta żaden ekran
+  (H2H/nemesis liczone z historii meczów) — trzymana dla eksportu.
 - **Lint react-hooks (compiler)**:
   - `Date.now()`/impure w funkcjach komponentu → wrapper modułowy `const now = () => Date.now()`;
   - zero synchronicznego setState w ciele efektu (async IIFE jest OK);
   - stan wyliczalny derivuj w renderze zamiast useEffect.
 - **Live sync**: Supabase Realtime (`subscribeToMatch`) + fallback polling 30 s.
   Wymaga publikacji `supabase_realtime` dla tabeli `matches` (sekcja 5 schematu).
-- **localStorage/sessionStorage**: `dart_input_mode`, `dart_voice_lang`,
+- **localStorage/sessionStorage/IndexedDB**: `dart_input_mode`, `dart_voice_lang`,
+  `dart_unsaved_match`, IndexedDB `osmiornica-cache`,
   `history-cache`, `history-scroll`. Goście mają id `guest_*` (pomijani w statystykach).
 - Design system: klasa `glass`, kolory `neon-green/yellow/red/blue/purple`,
   font Inter + JetBrains Mono — wszystko w `globals.css` (@theme Tailwind 4).
@@ -119,6 +144,9 @@ Turniejowe/duel legi mają `matchType !== "ranked"` — stary kod bez filtra to 
 - **Keep-alive Supabase (anty-pause)**: endpoint `/api/keep-alive` odpytuje bazę.
   Zarządzany przez Vercel Cron (`vercel.json`, codziennie) oraz GitHub Actions
   (`.github/workflows/keep-alive.yml`, co 3 dni), dzięki czemu darmowe Supabase nigdy nie zasypia po 7 dniach.
+- **Backup**: `.github/workflows/backup.yml` (pon./czw.) zapisuje surowe tabele jako artefakt
+  GitHub na 90 dni. Oba workflowy wymagają sekretów repo `SUPABASE_URL` i `SUPABASE_ANON_KEY`.
+- **Eksport/import w /dev** obejmuje też turnieje; import przy błędzie przywraca poprzednie dane.
 - Firebase został usunięty (martwy kod) — nie przywracać.
 
 ## Pomysły na przyszłość (zebrane od użytkownika)

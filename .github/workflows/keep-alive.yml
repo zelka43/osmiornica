@@ -11,10 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase Database via REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X GET "https://rqoqxeycxhdoialeamyx.supabase.co/rest/v1/players?select=id&limit=1" \
-            -H "apikey: sb_publishable_a8cxk2afr28wF0znvaVOZw_B8OM94xw" \
-            -H "Authorization: Bearer sb_publishable_a8cxk2afr28wF0znvaVOZw_B8OM94xw")
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$SUPABASE_URL/rest/v1/players?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
           echo "Supabase HTTP response: $response"
           if [ "$response" -ne 200 ]; then
             echo "Failed to ping Supabase!"

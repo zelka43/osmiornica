@@ -12,8 +12,22 @@ export function createInitialMatchState(startingScore: number): PlayerMatchState
   };
 }
 
+// Sumy 3 lotek niemożliwe do rzucenia
+const IMPOSSIBLE_SCORES = new Set([163, 166, 169, 172, 173, 175, 176, 178, 179]);
+// Reszty, których nie da się zamknąć 3 lotkami z doublem na końcu
+const BOGEY_NUMBERS = new Set([159, 162, 163, 165, 166, 168, 169]);
+
 export function validateScore(score: number): boolean {
-  return Number.isInteger(score) && score >= 0 && score <= 180;
+  return Number.isInteger(score) && score >= 0 && score <= 180 && !IMPOSSIBLE_SCORES.has(score);
+}
+
+export function canCheckout(remaining: number): boolean {
+  return remaining >= 2 && remaining <= 170 && !BOGEY_NUMBERS.has(remaining);
+}
+
+/** Reszta, przy której gracz celuje w double (≤40 parzyste lub bull 50) */
+export function isDoubleTerritory(remaining: number): boolean {
+  return (remaining <= 40 && remaining % 2 === 0 && remaining > 0) || remaining === 50;
 }
 
 export function processTurn(

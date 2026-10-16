@@ -22,7 +22,8 @@ import { useRouter } from "next/navigation";
 import NavBar from "@/components/ui/NavBar";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import DartboardHeatmap from "@/components/ui/DartboardHeatmap";
-import { getPlayers, getMatches, getAppSetting } from "@/lib/store";
+import { getPlayers, getAppSetting } from "@/lib/store";
+import { getRankedCompletedMatches } from "@/lib/matchCache";
 import {
   calculateThreeDartAvg,
   calculateCheckoutPercentage,
@@ -31,7 +32,6 @@ import {
   computeHighestCheckout,
   computeWinStreak,
   computeAvgFirst9Avg,
-  computeBestFirst9Avg,
   computePeriodTitles,
   computeAchievementLeaders,
   compareTiebreak,
@@ -122,7 +122,7 @@ export default function PlayersPage() {
 
   useEffect(() => {
     async function load() {
-      const [p, m, mode] = await Promise.all([getPlayers(), getMatches(), getAppSetting("ranking_mode")]);
+      const [p, m, mode] = await Promise.all([getPlayers(), getRankedCompletedMatches(), getAppSetting("ranking_mode")]);
       setPlayers(p);
       setMatches(m);
       if (mode === "points" || mode === "winpct" || mode === "rating") setRankingMode(mode);

@@ -5,7 +5,8 @@ import { motion } from "framer-motion";
 import { BarChart3, TrendingUp, Award, ChevronLeft, ChevronRight } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
-import { getPlayers, getMatches, getAppSetting } from "@/lib/store";
+import { getPlayers, getAppSetting } from "@/lib/store";
+import { getRankedCompletedMatches } from "@/lib/matchCache";
 import {
   calculateThreeDartAvg,
   calculateCheckoutPercentage,
@@ -61,7 +62,7 @@ export default function StatsPage() {
 
   useEffect(() => {
     async function load() {
-      const [p, m, savedMode] = await Promise.all([getPlayers(), getMatches(), getAppSetting("ranking_mode")]);
+      const [p, m, savedMode] = await Promise.all([getPlayers(), getRankedCompletedMatches(), getAppSetting("ranking_mode")]);
       setPlayers(p);
       setMatches(m);
       if (savedMode === "points" || savedMode === "winpct" || savedMode === "rating") {

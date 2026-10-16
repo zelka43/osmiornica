@@ -7,7 +7,7 @@ import { Target, ChevronRight, ChevronLeft } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
 import { getPlayers } from "@/lib/store";
-import { Player, GameMode, PLAYER_COLORS } from "@/types";
+import { Player, GameMode } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 import { createInitialMatchState } from "@/lib/dartLogic";
 import { setActiveMatch, saveMatch } from "@/lib/store";

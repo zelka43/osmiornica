@@ -63,20 +63,101 @@ export async function getPlayerById(id: string): Promise<Player | undefined> {
 const MATCH_LIST_COLUMNS =
   "id, game_mode, starting_score, player_ids, player_names, status, current_player_index, scores, winner_id, winner_name, created_at, completed_at, match_type, tournament_id, duel_id, legs_target, bull_winner";
 
+// PostgREST zwraca maks. 1000 wierszy na zapytanie — pobieramy stronami
+const PAGE_SIZE = 1000;
+
+async function fetchAllPages(
+  label: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  page: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: unknown }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[] | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows: any[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error) {
+      console.error(`${label} error:`, error);
+      return null;
+    }
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE_SIZE) return rows;
+  }
+}
+
 export async function getMatches(
   options?: { withTurns?: boolean }
 ): Promise<Match[]> {
   const withTurns = options?.withTurns ?? true;
+  const rows = await fetchAllPages("getMatches", (from, to) =>
+    supabase
+      .from("matches")
+      .select(withTurns ? "*" : MATCH_LIST_COLUMNS)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+  );
+  return (rows ?? []).map(mapMatch);
+}
+
+/** Legi jednego turnieju lub jednej serii pojedynku (bez historii rzutów). */
+export async function getSeriesLegs(
+  by: { tournamentId: string } | { duelId: string }
+): Promise<Match[]> {
+  const [column, value] =
+    "tournamentId" in by ? ["tournament_id", by.tournamentId] : ["duel_id", by.duelId];
   const { data, error } = await supabase
     .from("matches")
-    .select(withTurns ? "*" : MATCH_LIST_COLUMNS)
-    .order("created_at", { ascending: false });
+    .select(MATCH_LIST_COLUMNS)
+    .eq(column, value)
+    .order("created_at", { ascending: true });
   if (error) {
-    console.error("getMatches error:", error);
+    console.error("getSeriesLegs error:", error);
     return [];
   }
   return (data ?? []).map(mapMatch);
 }
+
+/** Lekka lista ukończonych meczów rankingowych: id + odcisk do walidacji cache. */
+export async function getRankedCompletedFingerprints(): Promise<
+  { id: string; fingerprint: string }[] | null
+> {
+  const rows = await fetchAllPages("getRankedCompletedFingerprints", (from, to) =>
+    supabase
+      .from("matches")
+      .select("id, completed_at, scores")
+      .eq("status", "completed")
+      // Stare wiersze mogą mieć match_type = null — traktujemy je jak ranked
+      .or("match_type.eq.ranked,match_type.is.null")
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+  );
+  if (!rows) return null;
+  return rows.map((r) => ({
+    id: r.id,
+    fingerprint: `${r.completed_at}|${JSON.stringify(r.scores)}`,
+  }));
+}
+
+/** Pełne mecze (z rzutami) o podanych id. */
+export async function getMatchesByIds(ids: string[]): Promise<Match[] | null> {
+  const out: Match[] = [];
+  // Partie po 100 — długość URL
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await supabase
+      .from("matches")
+      .select("*")
+      .in("id", ids.slice(i, i + 100));
+    if (error) {
+      console.error("getMatchesByIds error:", error);
+      return null;
+    }
+    out.push(...(data ?? []).map(mapMatch));
+  }
+  return out;
+}
+
 
 export async function saveMatch(match: Match): Promise<boolean> {
   const { error } = await supabase
@@ -275,7 +356,8 @@ export async function deleteMatchesSince(sinceTimestamp: number): Promise<void> 
 
 export async function recalculateAllPlayerStats(): Promise<void> {
   const players = await getPlayers();
-  const matches = (await getMatches()).filter(
+  // Statystyki liczone są wyłącznie z `scores` — historia rzutów niepotrzebna
+  const matches = (await getMatches({ withTurns: false })).filter(
     (m) => m.status === "completed" && (m.matchType ?? "ranked") === "ranked"
   );
 
@@ -305,33 +387,38 @@ export async function recalculateAllPlayerStats(): Promise<void> {
     await updatePlayer({ ...player, stats });
   }
 
-  // Recalculate H2H records
+  // Recalculate H2H records — tak samo jak finalizeMatch: zwycięzca vs każdy
+  // przegrany (także w meczach 3–4 osobowych), goście pomijani
   await supabase.from("h2h_records").delete().neq("id", "");
   const h2hMap = new Map<string, H2HRecord>();
   for (const m of matches) {
-    if (m.playerIds.length !== 2 || !m.winnerId) continue;
-    const [p1, p2] = [...m.playerIds].sort();
-    const key = `${p1}_${p2}`;
-    const existing = h2hMap.get(key);
-    if (existing) {
-      existing.totalMatches++;
-      if (existing.player1Id === m.winnerId) existing.player1Wins++;
-      else existing.player2Wins++;
-      existing.lastPlayed = Math.max(existing.lastPlayed, m.createdAt);
-    } else {
-      h2hMap.set(key, {
+    const winner = m.winnerId;
+    if (!winner || winner.startsWith("guest_")) continue;
+    for (const loser of m.playerIds) {
+      if (loser === winner || loser.startsWith("guest_")) continue;
+      const [p1, p2] = [winner, loser].sort();
+      const key = `${p1}_${p2}`;
+      const record: H2HRecord = h2hMap.get(key) ?? {
         id: key,
         player1Id: p1,
         player2Id: p2,
-        player1Wins: m.winnerId === p1 ? 1 : 0,
-        player2Wins: m.winnerId === p2 ? 1 : 0,
-        totalMatches: 1,
-        lastPlayed: m.createdAt,
-      });
+        player1Wins: 0,
+        player2Wins: 0,
+        totalMatches: 0,
+        lastPlayed: 0,
+      };
+      record.totalMatches++;
+      if (record.player1Id === winner) record.player1Wins++;
+      else record.player2Wins++;
+      record.lastPlayed = Math.max(record.lastPlayed, m.createdAt);
+      h2hMap.set(key, record);
     }
   }
-  for (const record of h2hMap.values()) {
-    await supabase.from("h2h_records").insert(toH2HRow(record));
+  if (h2hMap.size > 0) {
+    const { error } = await supabase
+      .from("h2h_records")
+      .insert([...h2hMap.values()].map(toH2HRow));
+    if (error) console.error("recalculate h2h insert error:", error);
   }
 }
 
@@ -402,6 +489,7 @@ export async function recalculateDoublesFromHistory(): Promise<number> {
 
 export async function clearAllData(): Promise<void> {
   await supabase.from("matches").delete().neq("id", "");
+  await supabase.from("tournaments").delete().neq("id", "");
   await supabase.from("players").delete().neq("id", "");
   await supabase.from("h2h_records").delete().neq("id", "");
   await supabase
@@ -410,12 +498,40 @@ export async function clearAllData(): Promise<void> {
     .eq("key", "active_match_id");
 }
 
+interface BackupData {
+  players?: Player[];
+  matches?: Match[];
+  h2h?: H2HRecord[];
+  tournaments?: Tournament[];
+  activeMatch?: Match | null;
+}
+
 export async function exportAllData(): Promise<string> {
-  const players = await getPlayers();
-  const matches = await getMatches();
-  const h2h = await getH2HRecords();
-  const activeMatch = await getActiveMatch();
-  return JSON.stringify({ players, matches, h2h, activeMatch });
+  const [players, matches, h2h, tournaments, activeMatch] = await Promise.all([
+    getPlayers(),
+    getMatches(),
+    getH2HRecords(),
+    getTournaments(),
+    getActiveMatch(),
+  ]);
+  const data: BackupData = { players, matches, h2h, tournaments, activeMatch };
+  return JSON.stringify(data);
+}
+
+// Wstawia wiersze partiami; rzuca błąd przy pierwszej nieudanej partii
+async function insertInChunks(table: string, rows: object[]): Promise<void> {
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await supabase.from(table).insert(rows.slice(i, i + 200));
+    if (error) throw new Error(`${table}: ${error.message}`);
+  }
+}
+
+async function writeBackup(data: BackupData): Promise<void> {
+  await insertInChunks("players", (data.players ?? []).map(toPlayerRow));
+  await insertInChunks("matches", (data.matches ?? []).map(toMatchRow));
+  await insertInChunks("h2h_records", (data.h2h ?? []).map(toH2HRow));
+  await insertInChunks("tournaments", (data.tournaments ?? []).map(toTournamentRow));
+  if (data.activeMatch) await setActiveMatch(data.activeMatch);
 }
 
 export async function importAllData(json: string): Promise<void> {
@@ -429,11 +545,12 @@ export async function importAllData(json: string): Promise<void> {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("Nieprawidłowa struktura pliku");
   }
-  const data = parsed as { players?: Player[]; matches?: Match[]; h2h?: H2HRecord[]; activeMatch?: Match | null };
+  const data = parsed as BackupData;
   for (const [key, value] of [
     ["players", data.players],
     ["matches", data.matches],
     ["h2h", data.h2h],
+    ["tournaments", data.tournaments],
   ] as const) {
     if (value === undefined) continue;
     if (!Array.isArray(value)) {
@@ -444,30 +561,26 @@ export async function importAllData(json: string): Promise<void> {
     }
   }
 
-  // Clear existing data
+  // Kopia bieżących danych — przywracana, gdy zapis importu się nie powiedzie
+  const current = JSON.parse(await exportAllData()) as BackupData;
+
   await clearAllData();
-
-  // Insert players
-  if (data.players?.length) {
-    const rows = data.players.map((p: Player) => toPlayerRow(p));
-    await supabase.from("players").insert(rows);
-  }
-
-  // Insert matches
-  if (data.matches?.length) {
-    const rows = data.matches.map((m: Match) => toMatchRow(m));
-    await supabase.from("matches").insert(rows);
-  }
-
-  // Insert h2h
-  if (data.h2h?.length) {
-    const rows = data.h2h.map((r: H2HRecord) => toH2HRow(r));
-    await supabase.from("h2h_records").insert(rows);
-  }
-
-  // Set active match
-  if (data.activeMatch) {
-    await setActiveMatch(data.activeMatch);
+  try {
+    await writeBackup(data);
+  } catch (importError) {
+    console.error("importAllData error, restoring previous data:", importError);
+    await clearAllData();
+    try {
+      await writeBackup(current);
+    } catch (restoreError) {
+      console.error("importAllData restore error:", restoreError);
+      throw new Error(
+        "Import nie powiódł się i nie udało się przywrócić poprzednich danych — wgraj ostatni backup."
+      );
+    }
+    throw new Error(
+      `Import nie powiódł się (${(importError as Error).message}). Przywrócono poprzednie dane.`
+    );
   }
 }
 

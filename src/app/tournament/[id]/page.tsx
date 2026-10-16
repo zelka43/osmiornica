@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Trophy, ChevronLeft, Play } from "lucide-react";
 
 import NavBar from "@/components/ui/NavBar";
-import { getTournamentById, getMatches, saveTournament, saveMatch, setActiveMatch } from "@/lib/store";
+import { getTournamentById, getSeriesLegs, saveTournament, saveMatch, setActiveMatch } from "@/lib/store";
 import { applyLegResult, isPlayable } from "@/lib/tournament";
 import { createInitialMatchState } from "@/lib/dartLogic";
 import type { Match, Tournament, TournamentMatch } from "@/types";
@@ -30,7 +30,7 @@ export default function TournamentBracketPage({ params }: { params: Promise<{ id
         setMounted(true);
         return;
       }
-      const legs = (await getMatches({ withTurns: false })).filter((m) => m.tournamentId === id);
+      const legs = await getSeriesLegs({ tournamentId: id });
       // Przelicz stan drabinki z wyników legów; zapisz jeśli się zmienił
       const recomputed = applyLegResult(t, legs);
       if (JSON.stringify(recomputed) !== JSON.stringify(t)) {

@@ -138,8 +138,8 @@ export default function DevPage() {
       try {
         await importAllData(ev.target?.result as string);
         showMessage("Dane zaimportowane pomyślnie.");
-      } catch {
-        showMessage("Błąd importu — nieprawidłowy format pliku.", "error");
+      } catch (err) {
+        showMessage(`Błąd importu: ${(err as Error).message}`, "error");
       }
     };
     reader.readAsText(file);

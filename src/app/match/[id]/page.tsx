@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, useCallback, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,12 +15,38 @@ import {
   Minimize2,
   Target,
   Swords,
+  WifiOff,
 } from "lucide-react";
-import { getMatchById, saveMatch, setActiveMatch, getPlayers, updatePlayer, subscribeToMatch, getTournamentById, getMatches, saveTournament } from "@/lib/store";
-import { updateH2H } from "@/lib/store";
-import { validateScore, processTurn, createInitialMatchState } from "@/lib/dartLogic";
+import {
+  getMatchById,
+  saveMatch,
+  setActiveMatch,
+  getPlayers,
+  updatePlayer,
+  subscribeToMatch,
+  getTournamentById,
+  getSeriesLegs,
+  saveTournament,
+  updateH2H,
+  recalculateAllPlayerStats,
+} from "@/lib/store";
+import {
+  validateScore,
+  processTurn,
+  canCheckout,
+  isDoubleTerritory,
+} from "@/lib/dartLogic";
+import {
+  applyQuickTurn,
+  applyDetailedTurn,
+  undoLastTurn as undoTurn,
+  createMatch,
+  seriesStarterIndex,
+  countLegWins,
+} from "@/lib/matchEngine";
 import { applyLegResult } from "@/lib/tournament";
 import { getCheckout } from "@/lib/checkouts";
+import { useWakeLock } from "@/lib/useWakeLock";
 import {
   initVoice,
   isEnabled as isVoiceEnabled,
@@ -33,28 +59,61 @@ import {
   setLanguage,
 } from "@/lib/voice";
 import { updatePlayerStatsAfterMatch, calculateThreeDartAvg } from "@/lib/statsCalculator";
-import { processDartByDartTurn } from "@/lib/dartLogic";
 import DartInput from "@/components/match/DartInput";
 import PostMatchStats from "@/components/match/PostMatchStats";
 import PlayerAvatar from "@/components/ui/PlayerAvatar";
-import type { Match, Turn, Dart, Player } from "@/types";
+import type { Match, Dart, Player } from "@/types";
 import { v4 as uuidv4 } from "uuid";
 
 // Wrapper dla react-hooks/purity — znaczniki czasu powstają tylko w handlerach
 const now = () => Date.now();
 
-const COLORS = [
-  "from-emerald-500 to-teal-600",
-  "from-blue-500 to-indigo-600",
-  "from-purple-500 to-violet-600",
-  "from-pink-500 to-rose-600",
-  "from-orange-500 to-amber-600",
-  "from-cyan-500 to-sky-600",
-  "from-red-500 to-pink-600",
-  "from-lime-500 to-green-600",
-  "from-fuchsia-500 to-purple-600",
-  "from-yellow-500 to-orange-600",
-];
+// Niezapisany stan meczu (brak sieci) — przetrwa odświeżenie strony
+const UNSAVED_KEY = "dart_unsaved_match";
+
+// Odcisk stanu meczu: odróżnia echo własnego zapisu od zmian z innego urządzenia
+const signature = (m: Match) =>
+  `${m.turns.length}|${m.turns[m.turns.length - 1]?.id ?? ""}|${m.status}|${m.currentPlayerIndex}`;
+
+const isSeries = (m: Match) =>
+  (m.matchType === "tournament" && !!m.tournamentId) || m.matchType === "duel";
+
+// Checkout czekający na doliczenie statystyk graczy (id meczu). Statystyki liczymy
+// dopiero po udanym zapisie meczu — także gdy zapis przejdzie później (brak sieci).
+const PENDING_FINALIZE_KEY = "dart_pending_finalize";
+
+async function finalizeMatch(completedMatch: Match) {
+  // Tylko mecze rankingowe wpływają na statystyki/H2H (friendly i turniejowe — nie).
+  if (completedMatch.matchType !== "ranked") return;
+
+  const allPlayers = await getPlayers();
+
+  for (const playerId of completedMatch.playerIds) {
+    if (playerId.startsWith("guest_")) continue;
+    const player = allPlayers.find((p) => p.id === playerId);
+    if (!player) continue;
+
+    const matchState = completedMatch.scores[playerId];
+    const isWinner = playerId === completedMatch.winnerId;
+
+    const updatedStats = updatePlayerStatsAfterMatch(
+      player.stats,
+      matchState,
+      isWinner,
+      matchState.dartsThrown
+    );
+
+    await updatePlayer({ ...player, stats: updatedStats });
+
+    if (
+      completedMatch.winnerId &&
+      playerId !== completedMatch.winnerId &&
+      !completedMatch.winnerId.startsWith("guest_")
+    ) {
+      await updateH2H(completedMatch.winnerId, playerId);
+    }
+  }
+}
 
 export default function MatchPage({
   params,
@@ -73,68 +132,65 @@ export default function MatchPage({
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [voiceLang, setVoiceLang] = useState<"en" | "pl">("en");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false);
   const [inputMode, setInputMode] = useState<"quick" | "detailed">("detailed");
   const [playersData, setPlayersData] = useState<Player[]>([]);
   const [mounted, setMounted] = useState(false);
-  const [showDoublesModal, setShowDoublesModal] = useState(false);
   const [pendingQuickTurn, setPendingQuickTurn] = useState<{
     score: number;
     isDoubleFinish: boolean;
-    result: { newRemaining: number; isBust: boolean; isCheckout: boolean };
-    currentPlayerId: string;
-    currentPlayerName: string;
-    currentState: import("@/types").PlayerMatchState;
+    isCheckout: boolean;
   } | null>(null);
   const [bull, setBull] = useState<{ p1Name: string; p2Name: string; scoreLine: string | null } | null>(null);
   const [bullDoneFor, setBullDoneFor] = useState<string | null>(null);
   const [legInfo, setLegInfo] = useState<{ mid: string; legNo: number; scoreLine: string; target: number } | null>(null);
+  const [invalidScore, setInvalidScore] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [seriesLegDone, setSeriesLegDone] = useState(false);
+  // Checkout wpisany w tej sesji — tylko taki można cofnąć (nie stary mecz z historii)
+  const [checkoutUndoable, setCheckoutUndoable] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // Zapisy idą po kolei (kolejność w bazie = kolejność tur)
+  const saveChain = useRef<Promise<void>>(Promise.resolve());
+  const latestRef = useRef<Match | null>(null);
+  const ownWrites = useRef(new Map<string, number>());
+  const lastSubmitAt = useRef(0);
+
+  useWakeLock(match?.status === "active");
 
   // Dane meczu turniejowego/pojedynku: numer lega + stan serii + ewentualny rzut na bulla
-  // (bull rozstrzyga tylko 1. lega — kolejne startują na przemian)
+  // (bull rozstrzyga tylko 1. lega — kolejne startują na przemian).
+  // Celowo raz na leg (id), a nie przy każdej turze.
   useEffect(() => {
     const m = match;
     if (!m || (m.matchType !== "tournament" && m.matchType !== "duel")) return;
     let cancelled = false;
     void (async () => {
-      let scoreLine = "0–0";
+      let legs: Match[] = [];
       let legNo = 1;
       let target = 1;
       let bullDecided = true;
       if (m.matchType === "tournament" && m.tournamentId) {
-        const t = await getTournamentById(m.tournamentId);
-        if (!t || cancelled) return;
-        const allLegs = (await getMatches({ withTurns: false })).filter(
-          (x) => x.tournamentId === t.id
-        );
-        const node = t.bracket.find((n) => n.legMatchIds.includes(m.id));
-        if (!node || cancelled) return;
+        const [t, allLegs] = await Promise.all([
+          getTournamentById(m.tournamentId),
+          getSeriesLegs({ tournamentId: m.tournamentId }),
+        ]);
+        const node = t?.bracket.find((n) => n.legMatchIds.includes(m.id));
+        if (!t || !node || cancelled) return;
         legNo = node.legMatchIds.length;
         target = t.legsToWin;
         bullDecided = node.bullWinnerId != null;
-        const wins: Record<string, number> = {};
-        for (const lid of node.legMatchIds) {
-          const lm = allLegs.find((x) => x.id === lid);
-          if (lm && lm.status === "completed" && lm.winnerId) {
-            wins[lm.winnerId] = (wins[lm.winnerId] ?? 0) + 1;
-          }
-        }
-        scoreLine = m.playerIds.map((pid) => wins[pid] ?? 0).join("–");
+        legs = allLegs.filter((l) => node.legMatchIds.includes(l.id));
       } else if (m.duelId) {
-        const allLegs = (await getMatches({ withTurns: false }))
-          .filter((x) => x.duelId === m.duelId)
-          .sort((a, b) => a.createdAt - b.createdAt);
-        legNo = allLegs.length;
+        legs = await getSeriesLegs({ duelId: m.duelId });
+        legNo = legs.length;
         target = m.legsTarget ?? 1;
-        bullDecided = allLegs.some((l) => l.bullWinnerId != null);
-        const wins: Record<string, number> = {};
-        for (const lm of allLegs) {
-          if (lm.status === "completed" && lm.winnerId) {
-            wins[lm.winnerId] = (wins[lm.winnerId] ?? 0) + 1;
-          }
-        }
-        scoreLine = m.playerIds.map((pid) => wins[pid] ?? 0).join("–");
+        bullDecided = legs.some((l) => l.bullWinnerId != null);
       }
       if (cancelled) return;
+      const wins = countLegWins(legs);
+      const scoreLine = m.playerIds.map((pid) => wins[pid] ?? 0).join("–");
       setLegInfo({ mid: m.id, legNo, scoreLine, target });
 
       if (
@@ -153,13 +209,79 @@ export default function MatchPage({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.id, bullDoneFor]);
 
+  // Zapis w kolejce; przy braku sieci stan ląduje w localStorage i jest ponawiany
+  const persistMatch = useCallback((updated: Match): Promise<void> => {
+    setMatch(updated);
+    latestRef.current = updated;
+    ownWrites.current.set(signature(updated), now());
+    const job = saveChain.current.then(async () => {
+      const [ok] = await Promise.all([
+        saveMatch(updated),
+        setActiveMatch(updated.status === "active" ? updated : null),
+      ]);
+      // Liczy się tylko wynik najnowszego zapisu — zawiera wszystkie wcześniejsze tury
+      if (latestRef.current !== updated) return;
+      let finalize = false;
+      try {
+        if (ok) localStorage.removeItem(UNSAVED_KEY);
+        else localStorage.setItem(UNSAVED_KEY, JSON.stringify(updated));
+        finalize =
+          ok &&
+          updated.status === "completed" &&
+          localStorage.getItem(PENDING_FINALIZE_KEY) === updated.id;
+        if (finalize) localStorage.removeItem(PENDING_FINALIZE_KEY);
+      } catch {}
+      setSaveFailed(!ok);
+      if (finalize) await finalizeMatch(updated);
+    });
+    saveChain.current = job;
+    return job;
+  }, []);
+
+  // Ponawianie niezapisanego stanu: co 5 s i po odzyskaniu sieci
   useEffect(() => {
+    if (!saveFailed) return;
+    const retry = () => {
+      if (latestRef.current) void persistMatch(latestRef.current);
+    };
+    const t = setInterval(retry, 5000);
+    window.addEventListener("online", retry);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("online", retry);
+    };
+  }, [saveFailed, persistMatch]);
+
+  useEffect(() => {
+    // Zmiana z innego urządzenia (Realtime/polling). Ignorujemy echo własnych zapisów
+    // i wszystko, gdy lokalnie czeka niezapisany stan — inaczej starsza wersja nadpisałaby nowszą.
+    const acceptRemote = (latest: Match) => {
+      try {
+        const raw = localStorage.getItem(UNSAVED_KEY);
+        if (raw && (JSON.parse(raw) as Match).id === id) return;
+      } catch {}
+      const sig = signature(latest);
+      const writtenAt = ownWrites.current.get(sig);
+      if (writtenAt !== undefined && now() - writtenAt < 15000) return;
+      latestRef.current = latest;
+      setMatch((prev) => (!prev || signature(prev) !== sig ? latest : prev));
+    };
+
     async function load() {
       const [m0, allPlayers] = await Promise.all([getMatchById(id), getPlayers()]);
       setPlayersData(allPlayers);
-      if (m0) {
+      let unsaved: Match | null = null;
+      try {
+        const raw = localStorage.getItem(UNSAVED_KEY);
+        if (raw) unsaved = JSON.parse(raw) as Match;
+      } catch {}
+      if (unsaved && unsaved.id === id) {
+        // Postęp, który nie dotarł do bazy przed odświeżeniem — wysyłamy ponownie
+        void persistMatch(unsaved);
+      } else if (m0) {
         let m = m0;
         // Wznowienie: porzucony mecz otwarty w widoku gry wraca do stanu aktywnego
         if (m.status === "abandoned") {
@@ -167,10 +289,12 @@ export default function MatchPage({
           await saveMatch(m);
           await setActiveMatch(m);
         }
+        latestRef.current = m;
         setMatch(m);
       }
       setVoiceOn(isVoiceEnabled());
       setVoiceLang(getLanguage());
+      setCanFullscreen(!!document.fullscreenEnabled);
       try {
         const savedMode = localStorage.getItem("dart_input_mode");
         if (savedMode === "quick" || savedMode === "detailed") setInputMode(savedMode);
@@ -180,35 +304,11 @@ export default function MatchPage({
     load();
 
     // Live sync: Supabase Realtime + wolny fallback polling
-    const unsubscribe = subscribeToMatch(id, (latest) => {
-      setMatch((prev) => {
-        if (!prev) return latest;
-        if (
-          latest.turns.length !== prev.turns.length ||
-          latest.status !== prev.status ||
-          latest.currentPlayerIndex !== prev.currentPlayerIndex
-        ) {
-          return latest;
-        }
-        return prev;
-      });
-    });
-
+    const unsubscribe = subscribeToMatch(id, acceptRemote);
     const pollInterval = setInterval(async () => {
       if (document.hidden) return;
       const latest = await getMatchById(id);
-      if (!latest) return;
-      setMatch((prev) => {
-        if (!prev) return latest;
-        if (
-          latest.turns.length !== prev.turns.length ||
-          latest.status !== prev.status ||
-          latest.currentPlayerIndex !== prev.currentPlayerIndex
-        ) {
-          return latest;
-        }
-        return prev;
-      });
+      if (latest) acceptRemote(latest);
     }, 30000);
 
     const onFullscreenChange = () => {
@@ -220,23 +320,7 @@ export default function MatchPage({
       clearInterval(pollInterval);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
     };
-  }, [id]);
-
-  const persistMatch = useCallback(
-    async (updated: Match) => {
-      setMatch(updated);
-      const [ok] = await Promise.all([
-        saveMatch(updated),
-        updated.status === "active"
-          ? setActiveMatch(updated)
-          : setActiveMatch(null),
-      ]);
-      if (!ok) {
-        alert("Nie udało się zapisać meczu — sprawdź połączenie z internetem. Postęp może nie być widoczny na innych urządzeniach.");
-      }
-    },
-    []
-  );
+  }, [id, persistMatch]);
 
   const toggleFullscreen = async () => {
     try {
@@ -250,12 +334,7 @@ export default function MatchPage({
 
   const abandonMatch = async () => {
     if (!match) return;
-    const updated: Match = {
-      ...match,
-      status: "abandoned",
-    };
-    await persistMatch(updated);
-    await setActiveMatch(null);
+    await persistMatch({ ...match, status: "abandoned" });
     router.push("/");
   };
 
@@ -271,8 +350,16 @@ export default function MatchPage({
     }
   };
 
+  // Blokada podwójnego tapnięcia: druga tura w ciągu 600 ms to prawie na pewno pomyłka
+  const acceptSubmit = (): boolean => {
+    const t = now();
+    if (t - lastSubmitAt.current < 600) return false;
+    lastSubmitAt.current = t;
+    return true;
+  };
+
   const handleNumpad = (key: string) => {
-    if (!match || match.status === "completed") return;
+    if (!match || match.status !== "active") return;
 
     if (key === "C") {
       setInputValue("");
@@ -285,282 +372,101 @@ export default function MatchPage({
     }
 
     if (key === "OK") {
-      submitScore();
+      // Pusty wynik nie jest zerem — do tego służy NO SCORE
+      if (inputValue !== "") submitScore(parseInt(inputValue));
       return;
     }
 
     // Digit
     const newValue = inputValue + key;
-    const num = parseInt(newValue);
-    if (num <= 180) {
+    if (parseInt(newValue) <= 180) {
       setInputValue(newValue);
     }
   };
 
-  const submitScore = async (overrideScore?: number) => {
-    if (!match || match.status === "completed") return;
-    const score =
-      overrideScore !== undefined
-        ? overrideScore
-        : inputValue === ""
-        ? 0
-        : parseInt(inputValue);
+  const submitScore = (score: number) => {
+    if (!match || match.status !== "active") return;
 
-    if (!validateScore(score)) return;
+    if (!validateScore(score)) {
+      setInvalidScore(true);
+      setTimeout(() => setInvalidScore(false), 1200);
+      return;
+    }
+    if (!acceptSubmit()) return;
+    setInputValue("");
 
-    const currentPlayerId = match.playerIds[match.currentPlayerIndex];
-    const currentState = match.scores[currentPlayerId];
-    const remaining = currentState.remaining;
-
-    // Check if this score would reach exactly 0 — ask about double
-    if (remaining - score === 0) {
+    const remaining = match.scores[match.playerIds[match.currentPlayerIndex]].remaining;
+    // Wynik zeruje resztę — pytamy o double, chyba że tej reszty nie da się zamknąć (bogey)
+    if (remaining - score === 0 && canCheckout(remaining)) {
       setPendingScore(score);
       setShowDoubleConfirm(true);
       return;
     }
-
-    // Process as non-double finish
-    await applyTurn(score, false);
+    applyTurn(score, false);
   };
 
-  const confirmDouble = async (isDouble: boolean) => {
-    if (pendingScore !== null) {
-      await applyTurn(pendingScore, isDouble);
-    }
+  const confirmDouble = (isDouble: boolean) => {
+    if (pendingScore !== null) applyTurn(pendingScore, isDouble);
     setShowDoubleConfirm(false);
     setPendingScore(null);
   };
 
-  // Returns true when a score counts as "in double territory" (player should aim at a double)
-  const isDoubleTerritory = (remaining: number): boolean =>
-    (remaining <= 40 && remaining % 2 === 0 && remaining > 0) || remaining === 50;
-
-  const applyTurnDetailed = async (darts: Dart[], turnTotal: number) => {
+  const applyTurn = (score: number, isDoubleFinish: boolean) => {
     if (!match) return;
+    const remaining = match.scores[match.playerIds[match.currentPlayerIndex]].remaining;
+    const { isCheckout } = processTurn(remaining, score, isDoubleFinish);
 
-    const currentPlayerId = match.playerIds[match.currentPlayerIndex];
-    const currentPlayerName = match.playerNames[match.currentPlayerIndex];
-    const currentState = match.scores[currentPlayerId];
-
-    const result = processDartByDartTurn(currentState.remaining, darts);
-
-    // Count doubles attempted/hit based on remaining BEFORE each dart
-    let newDoublesAttempted = currentState.doublesAttempted;
-    let newDoublesHit = currentState.doublesHit;
-    let runningRemaining = currentState.remaining;
-    for (const dart of darts) {
-      if (isDoubleTerritory(runningRemaining)) {
-        newDoublesAttempted++;
-        if (runningRemaining - dart.score === 0 && dart.multiplier === 2) {
-          newDoublesHit++;
-        }
-      }
-      runningRemaining -= dart.score;
-      if (runningRemaining <= 0) break;
-    }
-
-    const turn: Turn = {
-      id: uuidv4(),
-      playerId: currentPlayerId,
-      turnNumber: match.turns.length + 1,
-      darts,
-      turnTotal,
-      remainingAfter: result.newRemaining,
-      isBust: result.isBust,
-      isCheckout: result.isCheckout,
-      timestamp: now(),
-      dartsCount: result.validDarts,
-      doublesAttemptedDelta: newDoublesAttempted - currentState.doublesAttempted,
-      doublesHitDelta: newDoublesHit - currentState.doublesHit,
-    };
-
-    const updatedScores = { ...match.scores };
-    updatedScores[currentPlayerId] = {
-      ...currentState,
-      remaining: result.newRemaining,
-      // Bust nie liczy lotki, którą spowodował
-      dartsThrown: currentState.dartsThrown + result.validDarts,
-      pointsScored: result.isBust
-        ? currentState.pointsScored
-        : currentState.pointsScored + turnTotal,
-      oneEighties:
-        !result.isBust && turnTotal === 180 ? currentState.oneEighties + 1 : currentState.oneEighties,
-      tonPlus:
-        !result.isBust && turnTotal >= 100 && turnTotal < 180 ? currentState.tonPlus + 1 : currentState.tonPlus,
-      doublesAttempted: newDoublesAttempted,
-      doublesHit: newDoublesHit,
-    };
-
-    let nextPlayerIndex = (match.currentPlayerIndex + 1) % match.playerIds.length;
-    let status = match.status;
-    let winnerId = match.winnerId;
-    let winnerName = match.winnerName;
-    let completedAt = match.completedAt;
-
-    if (result.isCheckout) {
-      status = "completed";
-      winnerId = currentPlayerId;
-      winnerName = currentPlayerName;
-      completedAt = now();
-      nextPlayerIndex = match.currentPlayerIndex;
-    }
-
-    const updated: Match = {
-      ...match,
-      scores: updatedScores,
-      turns: [...match.turns, turn],
-      currentPlayerIndex: nextPlayerIndex,
-      status: status as "active" | "completed",
-      winnerId,
-      winnerName,
-      completedAt,
-    };
-
-    await persistMatch(updated);
-
-    // Voice & animations
-    if (result.isCheckout) {
-      setLastAction("checkout");
-      announceCheckout(currentPlayerName);
-      await finalizeMatch(updated);
-      await afterCheckout(updated);
-    } else if (result.isBust) {
-      setLastAction("bust");
-      announceBust(currentPlayerName);
-    } else {
-      setLastAction("score");
-      announceScore(currentPlayerName, turnTotal, result.newRemaining);
-    }
-
-    setTimeout(() => setLastAction(null), 1500);
-  };
-
-  const applyTurn = async (score: number, isDoubleFinish: boolean) => {
-    if (!match) return;
-
-    const currentPlayerId = match.playerIds[match.currentPlayerIndex];
-    const currentPlayerName = match.playerNames[match.currentPlayerIndex];
-    const currentState = match.scores[currentPlayerId];
-
-    const result = processTurn(currentState.remaining, score, isDoubleFinish);
-
-    // In quick mode, if player was in double territory (≤40 even, or 50), ask about doubles (including busts)
-    if (
-      inputMode === "quick" &&
-      isDoubleTerritory(currentState.remaining)
-    ) {
-      setPendingQuickTurn({
-        score,
-        isDoubleFinish,
-        result,
-        currentPlayerId,
-        currentPlayerName,
-        currentState,
-      });
-      setShowDoublesModal(true);
-      setInputValue("");
+    // W strefie doubli (≤40 parzyste lub 50) i przy każdym checkoucie pytamy o próby na double
+    if (isDoubleTerritory(remaining) || isCheckout) {
+      setPendingQuickTurn({ score, isDoubleFinish, isCheckout });
       return;
     }
-
-    // Otherwise proceed directly (bust, or not in checkout range, or detailed mode)
-    await finalizeQuickTurn(score, isDoubleFinish, result, currentPlayerId, currentPlayerName, currentState, 0);
+    void commitTurn(applyQuickTurn(match, score, isDoubleFinish, 0, uuidv4(), now()));
   };
 
-  const finalizeQuickTurn = async (
-    score: number,
-    isDoubleFinish: boolean,
-    result: { newRemaining: number; isBust: boolean; isCheckout: boolean },
-    currentPlayerId: string,
-    currentPlayerName: string,
-    currentState: import("@/types").PlayerMatchState,
-    doublesAttemptedCount: number
-  ) => {
-    if (!match) return;
+  const handleDoublesAnswer = (count: number) => {
+    if (!pendingQuickTurn || !match) return;
+    const { score, isDoubleFinish } = pendingQuickTurn;
+    setPendingQuickTurn(null);
+    void commitTurn(applyQuickTurn(match, score, isDoubleFinish, count, uuidv4(), now()));
+  };
 
-    const turn: Turn = {
-      id: uuidv4(),
-      playerId: currentPlayerId,
-      turnNumber: match.turns.length + 1,
-      darts: [],
-      turnTotal: score,
-      remainingAfter: result.newRemaining,
-      isBust: result.isBust,
-      isCheckout: result.isCheckout,
-      timestamp: now(),
-      dartsCount: 3,
-      doublesAttemptedDelta: doublesAttemptedCount,
-      doublesHitDelta: result.isCheckout ? 1 : 0,
-    };
+  const applyTurnDetailed = (darts: Dart[]) => {
+    if (!match || match.status !== "active" || !acceptSubmit()) return;
+    void commitTurn(applyDetailedTurn(match, darts, uuidv4(), now()));
+  };
 
-    const updatedScores = { ...match.scores };
-    updatedScores[currentPlayerId] = {
-      ...currentState,
-      remaining: result.newRemaining,
-      dartsThrown: currentState.dartsThrown + 3,
-      pointsScored: result.isBust
-        ? currentState.pointsScored
-        : currentState.pointsScored + score,
-      oneEighties:
-        !result.isBust && score === 180 ? currentState.oneEighties + 1 : currentState.oneEighties,
-      tonPlus:
-        !result.isBust && score >= 100 && score < 180 ? currentState.tonPlus + 1 : currentState.tonPlus,
-      doublesAttempted: currentState.doublesAttempted + doublesAttemptedCount,
-      doublesHit: result.isCheckout
-        ? currentState.doublesHit + 1
-        : currentState.doublesHit,
-    };
-
-    let nextPlayerIndex = (match.currentPlayerIndex + 1) % match.playerIds.length;
-    let status = match.status;
-    let winnerId = match.winnerId;
-    let winnerName = match.winnerName;
-    let completedAt = match.completedAt;
-
-    if (result.isCheckout) {
-      status = "completed";
-      winnerId = currentPlayerId;
-      winnerName = currentPlayerName;
-      completedAt = now();
-      nextPlayerIndex = match.currentPlayerIndex;
+  // Wspólny koniec tury: zapis, głos/animacja, a po checkoucie statystyki i seria
+  const commitTurn = async (updated: Match) => {
+    const turn = updated.turns[updated.turns.length - 1];
+    const name = updated.playerNames[updated.playerIds.indexOf(turn.playerId)];
+    if (turn.isCheckout) {
+      try {
+        localStorage.setItem(PENDING_FINALIZE_KEY, updated.id);
+      } catch {}
     }
+    // Przy checkoucie zapis kończy się doliczeniem statystyk (finalizeMatch)
+    const saved = persistMatch(updated);
 
-    const updated: Match = {
-      ...match,
-      scores: updatedScores,
-      turns: [...match.turns, turn],
-      currentPlayerIndex: nextPlayerIndex,
-      status: status as "active" | "completed",
-      winnerId,
-      winnerName,
-      completedAt,
-    };
-
-    await persistMatch(updated);
-    setInputValue("");
-
-    // Voice & animations
-    if (result.isCheckout) {
+    if (turn.isCheckout) {
       setLastAction("checkout");
-      announceCheckout(currentPlayerName);
-      await finalizeMatch(updated);
-      await afterCheckout(updated);
-    } else if (result.isBust) {
+      announceCheckout(name);
+      setBusy(true);
+      await saved;
+      setBusy(false);
+      setCheckoutUndoable(true);
+      // Seria: chwila na cofnięcie pomyłki, zanim powstanie kolejny leg
+      if (isSeries(updated)) setSeriesLegDone(true);
+      else setTimeout(() => setShowWinModal(true), 500);
+    } else if (turn.isBust) {
       setLastAction("bust");
-      announceBust(currentPlayerName);
+      announceBust(name);
     } else {
       setLastAction("score");
-      announceScore(currentPlayerName, score, result.newRemaining);
+      announceScore(name, turn.turnTotal, turn.remainingAfter);
     }
 
     setTimeout(() => setLastAction(null), 1500);
-  };
-
-  const handleDoublesAnswer = async (count: number) => {
-    if (!pendingQuickTurn) return;
-    setShowDoublesModal(false);
-    const { score, isDoubleFinish, result, currentPlayerId, currentPlayerName, currentState } = pendingQuickTurn;
-    setPendingQuickTurn(null);
-    await finalizeQuickTurn(score, isDoubleFinish, result, currentPlayerId, currentPlayerName, currentState, count);
   };
 
   const pickBullWinner = async (playerIndex: number) => {
@@ -586,64 +492,56 @@ export default function MatchPage({
     }
   };
 
-  // Po zakończonym legu serii (turniej/pojedynek): albo seria rozstrzygnięta
-  // (statystyki + powrót), albo automatyczny kolejny leg w tym samym widoku.
-  const chainOrFinishSeriesLeg = async (completedLeg: Match): Promise<boolean> => {
-    if (completedLeg.matchType === "duel") {
-      return chainOrFinishDuel(completedLeg);
-    }
+  // Po zatwierdzonym legu serii (turniej/pojedynek): albo seria rozstrzygnięta
+  // (powrót), albo automatyczny kolejny leg w tym samym widoku.
+  const continueSeries = async () => {
+    if (!match) return;
+    setBusy(true);
+    const chained =
+      match.matchType === "duel" ? await chainDuel(match) : await chainTournament(match);
+    setBusy(false);
+    setSeriesLegDone(false);
+    setCheckoutUndoable(false);
+    if (!chained) setShowWinModal(true);
+  };
+
+  const chainTournament = async (completedLeg: Match): Promise<boolean> => {
     const tid = completedLeg.tournamentId;
     if (!tid) return false;
-    const t = await getTournamentById(tid);
+    const [t, allLegs] = await Promise.all([
+      getTournamentById(tid),
+      getSeriesLegs({ tournamentId: tid }),
+    ]);
     if (!t) return false;
 
-    const allLegs = (await getMatches({ withTurns: false })).filter(
-      (m) => m.tournamentId === tid
-    );
     const recomputed = applyLegResult(t, allLegs);
     const node = recomputed.bracket.find((n) => n.legMatchIds.includes(completedLeg.id));
-    if (!node) {
+    if (!node || node.winnerId) {
       await saveTournament(recomputed);
       return false;
     }
-
-    if (node.winnerId) {
-      await saveTournament(recomputed);
-      return false;
+    // Kolejny leg już istnieje (np. powrót do starego lega) — nie twórz drugiego
+    const lastLegId = node.legMatchIds[node.legMatchIds.length - 1];
+    if (lastLegId !== completedLeg.id) {
+      router.replace(`/match/${lastLegId}`);
+      return true;
     }
 
-    // Kolejny leg zaczyna drugi gracz — naprzemiennie względem zwycięzcy bulla:
-    // leg 1 zaczyna zwycięzca bulla, leg 2 przeciwnik, leg 3 znów zwycięzca...
-    const legNumber = node.legMatchIds.length + 1;
-    let starterIdx = 0;
-    if (node.bullWinnerId) {
-      const bullIdx = completedLeg.playerIds.indexOf(node.bullWinnerId);
-      starterIdx =
-        legNumber % 2 === 1 ? Math.max(0, bullIdx) : 1 - Math.max(0, bullIdx);
-    }
-
-    const scores: Match["scores"] = {};
-    for (const pid of completedLeg.playerIds) {
-      scores[pid] = createInitialMatchState(completedLeg.startingScore);
-    }
-    const nextLeg: Match = {
+    const nextLeg = createMatch({
       id: uuidv4(),
+      createdAt: now(),
       gameMode: completedLeg.gameMode,
       startingScore: completedLeg.startingScore,
       playerIds: completedLeg.playerIds,
       playerNames: completedLeg.playerNames,
-      status: "active",
-      currentPlayerIndex: starterIdx,
-      scores,
-      winnerId: null,
-      winnerName: null,
-      createdAt: now(),
-      completedAt: null,
-      turns: [],
       matchType: "tournament",
       tournamentId: tid,
-    };
-
+      currentPlayerIndex: seriesStarterIndex(
+        node.legMatchIds.length + 1,
+        completedLeg.playerIds,
+        node.bullWinnerId
+      ),
+    });
     const updatedBracket = recomputed.bracket.map((n) =>
       n.id === node.id ? { ...n, legMatchIds: [...n.legMatchIds, nextLeg.id] } : n
     );
@@ -657,141 +555,56 @@ export default function MatchPage({
   };
 
   // Pojedynek: kolejny leg dopóki nikt nie osiągnął legsTarget
-  const chainOrFinishDuel = async (completedLeg: Match): Promise<boolean> => {
+  const chainDuel = async (completedLeg: Match): Promise<boolean> => {
     const duelId = completedLeg.duelId;
     if (!duelId) return false;
     const target = completedLeg.legsTarget ?? 1;
 
-    const allLegs = (await getMatches({ withTurns: false }))
-      .filter((m) => m.duelId === duelId)
-      .sort((a, b) => a.createdAt - b.createdAt);
-    const wins: Record<string, number> = {};
-    for (const lm of allLegs) {
-      if (lm.status === "completed" && lm.winnerId) {
-        wins[lm.winnerId] = (wins[lm.winnerId] ?? 0) + 1;
-      }
-    }
-    const [p1, p2] = completedLeg.playerIds;
-    if ((wins[p1] ?? 0) >= target || (wins[p2] ?? 0) >= target) return false;
-
-    // Kolejny leg — naprzemiennie względem zwycięzcy bulla
-    const legNumber = allLegs.length + 1;
-    let starterIdx = 0;
-    const bullWinner = completedLeg.bullWinnerId ?? allLegs.find((l) => l.bullWinnerId)?.bullWinnerId;
-    if (bullWinner) {
-      const bullIdx = completedLeg.playerIds.indexOf(bullWinner);
-      starterIdx = legNumber % 2 === 1 ? Math.max(0, bullIdx) : 1 - Math.max(0, bullIdx);
+    const allLegs = await getSeriesLegs({ duelId });
+    const wins = countLegWins(allLegs);
+    if (completedLeg.playerIds.some((pid) => (wins[pid] ?? 0) >= target)) return false;
+    const laterLeg = allLegs.find((l) => l.createdAt > completedLeg.createdAt);
+    if (laterLeg) {
+      router.replace(`/match/${laterLeg.id}`);
+      return true;
     }
 
-    const scores: Match["scores"] = {};
-    for (const pid of completedLeg.playerIds) {
-      scores[pid] = createInitialMatchState(completedLeg.startingScore);
-    }
-    const nextLeg: Match = {
+    const bullWinner =
+      completedLeg.bullWinnerId ?? allLegs.find((l) => l.bullWinnerId)?.bullWinnerId ?? null;
+    const nextLeg = createMatch({
       id: uuidv4(),
+      createdAt: now(),
       gameMode: completedLeg.gameMode,
       startingScore: completedLeg.startingScore,
       playerIds: completedLeg.playerIds,
       playerNames: completedLeg.playerNames,
-      status: "active",
-      currentPlayerIndex: starterIdx,
-      scores,
-      winnerId: null,
-      winnerName: null,
-      createdAt: now(),
-      completedAt: null,
-      turns: [],
       matchType: "duel",
       duelId,
       legsTarget: target,
-      bullWinnerId: bullWinner ?? null,
-    };
+      bullWinnerId: bullWinner,
+      currentPlayerIndex: seriesStarterIndex(allLegs.length + 1, completedLeg.playerIds, bullWinner),
+    });
     await Promise.all([saveMatch(nextLeg), setActiveMatch(nextLeg)]);
     router.replace(`/match/${nextLeg.id}`);
     return true;
   };
 
-  const afterCheckout = async (completed: Match): Promise<void> => {
-    if (
-      (completed.matchType === "tournament" && completed.tournamentId) ||
-      completed.matchType === "duel"
-    ) {
-      const chained = await chainOrFinishSeriesLeg(completed);
-      if (chained) return;
-    }
-    setTimeout(() => setShowWinModal(true), 500);
-  };
-
-  const finalizeMatch = async (completedMatch: Match) => {
-    // Tylko mecze rankingowe wpływają na statystyki/H2H (friendly i turniejowe — nie).
-    if (completedMatch.matchType !== "ranked") return;
-
-    const allPlayers = await getPlayers();
-
-    for (const playerId of completedMatch.playerIds) {
-      if (playerId.startsWith("guest_")) continue;
-      const player = allPlayers.find((p) => p.id === playerId);
-      if (!player) continue;
-
-      const matchState = completedMatch.scores[playerId];
-      const isWinner = playerId === completedMatch.winnerId;
-
-      const updatedStats = updatePlayerStatsAfterMatch(
-        player.stats,
-        matchState,
-        isWinner,
-        matchState.dartsThrown
-      );
-
-      await updatePlayer({ ...player, stats: updatedStats });
-
-      if (
-        completedMatch.winnerId &&
-        playerId !== completedMatch.winnerId &&
-        !completedMatch.winnerId.startsWith("guest_")
-      ) {
-        await updateH2H(completedMatch.winnerId, playerId);
-      }
-    }
-  };
-
   const handleRematch = async () => {
     if (!match) return;
-    const ids = [...match.playerIds];
-    const names = [...match.playerNames];
-    for (let i = ids.length - 1; i > 0; i--) {
+    const order = match.playerIds.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [ids[i], ids[j]] = [ids[j], ids[i]];
-      [names[i], names[j]] = [names[j], names[i]];
+      [order[i], order[j]] = [order[j], order[i]];
     }
-    const scores: Match["scores"] = {};
-    for (const pid of ids) {
-      scores[pid] = {
-        remaining: match.startingScore,
-        dartsThrown: 0,
-        doublesAttempted: 0,
-        doublesHit: 0,
-        pointsScored: 0,
-        oneEighties: 0,
-        tonPlus: 0,
-      };
-    }
-    const newMatch: Match = {
+    const newMatch = createMatch({
       id: uuidv4(),
+      createdAt: now(),
       gameMode: match.gameMode,
       startingScore: match.startingScore,
-      playerIds: ids,
-      playerNames: names,
-      status: "active",
-      currentPlayerIndex: 0,
-      scores,
-      winnerId: null,
-      winnerName: null,
-      createdAt: now(),
-      completedAt: null,
-      turns: [],
+      playerIds: order.map((i) => match.playerIds[i]),
+      playerNames: order.map((i) => match.playerNames[i]),
       matchType: match.matchType,
-    };
+    });
     await saveMatch(newMatch);
     await setActiveMatch(newMatch);
     router.push(`/match/${newMatch.id}`);
@@ -800,80 +613,48 @@ export default function MatchPage({
   // Rewanż w pojedynku: nowa seria, bull od nowa
   const handleDuelRematch = async () => {
     if (!match) return;
-    const scores: Match["scores"] = {};
-    for (const pid of match.playerIds) {
-      scores[pid] = createInitialMatchState(match.startingScore);
-    }
-    const nextLeg: Match = {
+    const nextLeg = createMatch({
       id: uuidv4(),
+      createdAt: now(),
       gameMode: match.gameMode,
       startingScore: match.startingScore,
       playerIds: match.playerIds,
       playerNames: match.playerNames,
-      status: "active",
-      currentPlayerIndex: 0,
-      scores,
-      winnerId: null,
-      winnerName: null,
-      createdAt: now(),
-      completedAt: null,
-      turns: [],
       matchType: "duel",
       duelId: uuidv4(),
       legsTarget: match.legsTarget ?? 1,
       bullWinnerId: null,
-    };
+    });
     await saveMatch(nextLeg);
     await setActiveMatch(nextLeg);
     router.replace(`/match/${nextLeg.id}`);
   };
 
+  // Cofnięcie tury. Cofnięty checkout meczu rankingowego wymaga przeliczenia statystyk
+  // graczy i H2H (zostały już zapisane). Leg serii można cofnąć tylko przed „Dalej”.
+  const canUndo =
+    !!match &&
+    match.turns.length > 0 &&
+    !busy &&
+    (match.status === "active" || (match.status === "completed" && checkoutUndoable));
+
   const undoLastTurn = async () => {
-    if (!match || match.turns.length === 0 || match.status === "completed") return;
-
-    const lastTurn = match.turns[match.turns.length - 1];
-    const prevState = match.scores[lastTurn.playerId];
-    if (!prevState) return;
-
-    // Cofnij dokładnie te wartości, które tura dodała (fallback dla starych danych)
-    const restoredDarts =
-      lastTurn.dartsCount ?? (lastTurn.darts.length > 0 ? lastTurn.darts.length : 3);
-    const restoredDoublesAttempted = lastTurn.doublesAttemptedDelta ?? 0;
-    const restoredDoublesHit = lastTurn.doublesHitDelta ?? (lastTurn.isCheckout ? 1 : 0);
-
-    const updatedScores = { ...match.scores };
-    updatedScores[lastTurn.playerId] = {
-      ...prevState,
-      remaining: lastTurn.isBust
-        ? prevState.remaining
-        : lastTurn.remainingAfter + lastTurn.turnTotal,
-      dartsThrown: Math.max(0, prevState.dartsThrown - restoredDarts),
-      pointsScored: lastTurn.isBust
-        ? prevState.pointsScored
-        : prevState.pointsScored - lastTurn.turnTotal,
-      oneEighties:
-        !lastTurn.isBust && lastTurn.turnTotal === 180
-          ? prevState.oneEighties - 1
-          : prevState.oneEighties,
-      tonPlus:
-        !lastTurn.isBust && lastTurn.turnTotal >= 100 && lastTurn.turnTotal < 180
-          ? prevState.tonPlus - 1
-          : prevState.tonPlus,
-      doublesAttempted: Math.max(0, prevState.doublesAttempted - restoredDoublesAttempted),
-      doublesHit: Math.max(0, prevState.doublesHit - restoredDoublesHit),
-    };
-
-    // Find previous player index
-    const prevPlayerIdx = match.playerIds.indexOf(lastTurn.playerId);
-
-    const updated: Match = {
-      ...match,
-      scores: updatedScores,
-      turns: match.turns.slice(0, -1),
-      currentPlayerIndex: prevPlayerIdx,
-    };
-
-    await persistMatch(updated);
+    if (!match || !canUndo) return;
+    const wasCompleted = match.status === "completed";
+    setShowWinModal(false);
+    setSeriesLegDone(false);
+    setCheckoutUndoable(false);
+    try {
+      localStorage.removeItem(PENDING_FINALIZE_KEY);
+    } catch {}
+    if (!wasCompleted) {
+      void persistMatch(undoTurn(match));
+      return;
+    }
+    setBusy(true);
+    await persistMatch(undoTurn(match));
+    if (match.matchType === "ranked") await recalculateAllPlayerStats();
+    setBusy(false);
   };
 
   if (!mounted || !match) {
@@ -916,25 +697,30 @@ export default function MatchPage({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 rounded-xl hover:bg-surface transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-          >
-            {isFullscreen ? (
-              <Minimize2 size={18} className="text-muted" />
-            ) : (
-              <Maximize2 size={18} className="text-muted" />
-            )}
-          </button>
+          {canFullscreen && (
+            <button
+              onClick={toggleFullscreen}
+              aria-label={isFullscreen ? "Wyjdź z pełnego ekranu" : "Pełny ekran"}
+              className="p-2 rounded-xl hover:bg-surface transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              {isFullscreen ? (
+                <Minimize2 size={18} className="text-muted" />
+              ) : (
+                <Maximize2 size={18} className="text-muted" />
+              )}
+            </button>
+          )}
           <button
             onClick={undoLastTurn}
-            disabled={match.turns.length === 0 || match.status === "completed"}
+            disabled={!canUndo}
+            aria-label="Cofnij ostatnią turę"
             className="p-2 rounded-xl hover:bg-surface transition-colors disabled:opacity-30 min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             <Undo2 size={18} className="text-muted" />
           </button>
           <button
             onClick={toggleVoice}
+            aria-label={voiceOn ? "Wyłącz głos" : "Włącz głos"}
             className="p-2 rounded-xl hover:bg-surface transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             {voiceOn ? (
@@ -958,6 +744,7 @@ export default function MatchPage({
           {match.status === "active" && (
             <button
               onClick={() => setShowExitConfirm(true)}
+              aria-label="Opuść mecz"
               className="p-2 rounded-xl hover:bg-neon-red/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               <X size={18} className="text-muted hover:text-neon-red" />
@@ -965,6 +752,13 @@ export default function MatchPage({
           )}
         </div>
       </div>
+
+      {saveFailed && (
+        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-neon-yellow/10 border-b border-neon-yellow/20 text-neon-yellow text-xs font-medium">
+          <WifiOff size={14} />
+          Brak połączenia — wynik zapisany na tym telefonie, wyślę go automatycznie
+        </div>
+      )}
 
       {/* Scoreboard */}
       <div className="px-3 py-2">
@@ -1193,11 +987,26 @@ export default function MatchPage({
           {inputMode === "quick" ? (
             <>
               {/* Input display */}
-              <div className="glass rounded-2xl px-6 py-4 mb-3 text-center">
-                <span className="font-mono text-4xl font-bold text-foreground">
+              <motion.div
+                animate={invalidScore ? { x: [0, -8, 8, -6, 6, 0] } : { x: 0 }}
+                transition={{ duration: 0.35 }}
+                className={`glass rounded-2xl px-6 py-4 mb-3 text-center border ${
+                  invalidScore ? "border-neon-red/50" : "border-transparent"
+                }`}
+              >
+                <span
+                  className={`font-mono text-4xl font-bold ${
+                    invalidScore ? "text-neon-red" : "text-foreground"
+                  }`}
+                >
                   {inputValue || "0"}
                 </span>
-              </div>
+                {invalidScore && (
+                  <span className="block text-xs text-neon-red mt-1">
+                    Tego wyniku nie da się rzucić 3 lotkami
+                  </span>
+                )}
+              </motion.div>
 
               {/* Numpad */}
               <div className="grid grid-cols-4 gap-2">
@@ -1228,10 +1037,7 @@ export default function MatchPage({
                 {/* Bottom row: NO SCORE and OK */}
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setInputValue("");
-                    submitScore(0);
-                  }}
+                  onClick={() => submitScore(0)}
                   className="col-span-2 h-14 sm:h-16 rounded-xl font-bold text-sm bg-surface-light text-neon-red hover:bg-neon-red/10 transition-all"
                 >
                   NO SCORE
@@ -1248,15 +1054,22 @@ export default function MatchPage({
           ) : (
             <DartInput
               remaining={currentRemaining}
-              onConfirm={(darts, turnTotal) => {
-                applyTurnDetailed(darts, turnTotal);
-              }}
+              onConfirm={(darts) => applyTurnDetailed(darts)}
             />
           )}
         </div>
       ) : (
         /* Match completed */
         <div className="px-4 pb-8 safe-bottom space-y-3">
+          {canUndo && !seriesLegDone && (
+            <button
+              onClick={undoLastTurn}
+              className="w-full rounded-2xl p-3 flex items-center justify-center gap-2 text-sm font-medium text-muted bg-surface hover:bg-surface-light transition-colors"
+            >
+              <Undo2 size={16} />
+              Pomyłka? Cofnij zamknięcie
+            </button>
+          )}
           <button
             onClick={() => setShowWinModal(true)}
             className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-blue"
@@ -1264,6 +1077,16 @@ export default function MatchPage({
             <BarChart3 size={18} />
             Statystyki meczu
           </button>
+          {isSeries(match) && !seriesLegDone && (
+            <button
+              onClick={continueSeries}
+              disabled={busy}
+              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-green disabled:opacity-40"
+            >
+              <Target size={18} />
+              Kontynuuj serię
+            </button>
+          )}
           {match.tournamentId ? (
             <button
               onClick={async () => {
@@ -1306,6 +1129,50 @@ export default function MatchPage({
           )}
         </div>
       )}
+
+      {/* Koniec lega w serii: potwierdzenie przed kolejnym legiem (można cofnąć pomyłkę) */}
+      <AnimatePresence>
+        {seriesLegDone && match.status === "completed" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass rounded-2xl p-6 w-full max-w-sm text-center"
+            >
+              <Trophy size={32} className="text-neon-yellow mx-auto mb-3" />
+              <h3 className="text-lg font-bold mb-1">
+                Leg dla <span className="text-neon-green">{match.winnerName}</span>
+              </h3>
+              <p className="text-sm text-muted mb-5">
+                Zamknięcie {match.turns[match.turns.length - 1]?.turnTotal}. Wszystko się zgadza?
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={undoLastTurn}
+                  disabled={busy}
+                  className="rounded-xl p-3 bg-surface text-foreground font-medium hover:bg-surface-light transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                  <Undo2 size={16} />
+                  Cofnij
+                </button>
+                <button
+                  onClick={continueSeries}
+                  disabled={busy}
+                  className="rounded-xl p-3 bg-neon-green text-background font-bold glow-green hover:bg-neon-green-dim transition-all disabled:opacity-40"
+                >
+                  {busy ? "Chwila…" : "Dalej"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bull-off: kto zaczyna lega (turnieje) */}
       <AnimatePresence>
@@ -1483,7 +1350,7 @@ export default function MatchPage({
 
       {/* Doubles tracking modal (quick mode) */}
       <AnimatePresence>
-        {showDoublesModal && pendingQuickTurn && (
+        {pendingQuickTurn && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1497,17 +1364,17 @@ export default function MatchPage({
               className="glass rounded-2xl p-6 w-full max-w-sm text-center"
             >
               <h3 className="text-lg font-bold mb-2">
-                {pendingQuickTurn.result.isCheckout
+                {pendingQuickTurn.isCheckout
                   ? "Ile prób na dable?"
                   : "Ile lotek celowane w dable?"}
               </h3>
               <p className="text-sm text-muted mb-4">
-                {pendingQuickTurn.result.isCheckout
+                {pendingQuickTurn.isCheckout
                   ? "Ile lotek celowałeś w dable zanim trafiłeś?"
                   : "Ile z 3 lotek celowałeś w dable?"}
               </p>
-              <div className={`grid ${pendingQuickTurn.result.isCheckout ? "grid-cols-3" : "grid-cols-4"} gap-3`}>
-                {(pendingQuickTurn.result.isCheckout ? [1, 2, 3] : [0, 1, 2, 3]).map((n) => (
+              <div className={`grid ${pendingQuickTurn.isCheckout ? "grid-cols-3" : "grid-cols-4"} gap-3`}>
+                {(pendingQuickTurn.isCheckout ? [1, 2, 3] : [0, 1, 2, 3]).map((n) => (
                   <motion.button
                     key={n}
                     whileTap={{ scale: 0.95 }}

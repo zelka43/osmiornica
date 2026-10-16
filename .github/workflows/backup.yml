@@ -1,0 +1,50 @@
+name: Supabase Backup
+
+# Kopia wszystkich tabel jako artefakt GitHub (przechowywany 90 dni).
+# Baza ma otwarte RLS — każdy z URL-em może ją wyczyścić, więc kopia to jedyna siatka.
+# Pliki to surowe wiersze tabel (snake_case, jak w bazie) — przywracanie przez
+# Supabase (Table Editor → Import albo SQL), nie przez /dev → Import.
+
+on:
+  schedule:
+    # Co poniedziałek i czwartek o 03:00 UTC
+    - cron: '0 3 * * 1,4'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump tables
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          fetch() {
+            # PostgREST zwraca maks. 1000 wierszy — pobieramy stronami
+            local table=$1 order=$2 offset=0 page
+            echo "[]" > "backup/$table.json"
+            while :; do
+              page=$(curl -sf "$SUPABASE_URL/rest/v1/$table?select=*&order=$order&limit=1000&offset=$offset" \
+                -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+              jq -s '.[0] + .[1]' "backup/$table.json" <(echo "$page") > "backup/tmp.json"
+              mv backup/tmp.json "backup/$table.json"
+              [ "$(echo "$page" | jq length)" -lt 1000 ] && break
+              offset=$((offset + 1000))
+            done
+            echo "$table: $(jq length "backup/$table.json") rows"
+          }
+          fetch players id
+          fetch matches id
+          fetch tournaments id
+          fetch h2h_records id
+          fetch app_state key
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_number }}
+          path: backup/
+          retention-days: 90
