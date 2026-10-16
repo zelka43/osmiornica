@@ -155,8 +155,8 @@ export default function CheckoutTrainingPage() {
             >
               <ChevronLeft size={20} className="text-muted" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-neon-yellow/10 flex items-center justify-center">
-              <Shuffle className="text-neon-yellow" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-warn/10 flex items-center justify-center">
+              <Shuffle className="text-warn-ink" size={20} />
             </div>
             <div>
               <h1 className="text-xl font-bold">Losowy checkout</h1>
@@ -180,14 +180,14 @@ export default function CheckoutTrainingPage() {
                       onClick={() => { setSelectMode(key); setCustomError(""); }}
                       className={`w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 ${
                         selectMode === key
-                          ? "glass glow-green border border-neon-green/30"
+                          ? "glass glow-green border border-accent-ink/30"
                           : "glass border border-transparent hover:border-border-bright"
                       }`}
                     >
                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        selectMode === key ? "border-neon-green" : "border-muted"
+                        selectMode === key ? "border-accent-ink" : "border-muted"
                       }`}>
-                        {selectMode === key && <div className="w-2 h-2 rounded-full bg-neon-green" />}
+                        {selectMode === key && <div className="w-2 h-2 rounded-full bg-accent" />}
                       </div>
                       <div className="text-left">
                         <p className="font-semibold">{label}</p>
@@ -210,16 +210,16 @@ export default function CheckoutTrainingPage() {
                       placeholder="Wpisz liczbę (np. 121)"
                       className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none border border-transparent focus:border-border-bright transition-colors font-mono"
                     />
-                    {customError && <p className="text-neon-red text-xs mt-1">{customError}</p>}
+                    {customError && <p className="text-danger-ink text-xs mt-1">{customError}</p>}
                     {customInput && CHECKOUTS[parseInt(customInput)] && (
-                      <p className="text-neon-green text-xs mt-1 font-mono">✓ {CHECKOUTS[parseInt(customInput)]}</p>
+                      <p className="text-accent-ink text-xs mt-1 font-mono">✓ {CHECKOUTS[parseInt(customInput)]}</p>
                     )}
                   </motion.div>
                 )}
 
                 <button
                   onClick={start}
-                  className="w-full rounded-2xl p-4 bg-neon-green text-background font-bold text-lg glow-green"
+                  className="w-full rounded-2xl p-4 bg-accent text-on-accent font-bold text-lg glow-green"
                 >
                   Rozpocznij
                 </button>
@@ -236,18 +236,18 @@ export default function CheckoutTrainingPage() {
                   </div>
                   <div className="glass rounded-2xl p-3 text-center">
                     <p className="text-[10px] text-muted mb-1">Trafione</p>
-                    <p className="font-mono text-xl font-bold text-neon-green">{successes}</p>
+                    <p className="font-mono text-xl font-bold text-accent-ink">{successes}</p>
                   </div>
                   <div className="glass rounded-2xl p-3 text-center">
                     <p className="text-[10px] text-muted mb-1">Skutecz.</p>
-                    <p className="font-mono text-xl font-bold text-neon-blue">{successRate}%</p>
+                    <p className="font-mono text-xl font-bold text-info-ink">{successRate}%</p>
                   </div>
                 </div>
 
                 {/* Remaining */}
                 <div className={`glass rounded-2xl p-6 text-center mb-2 transition-all ${
-                  turnResult === "checkout" ? "border border-neon-green/50 bg-neon-green/5" :
-                  turnResult === "bust" ? "border border-neon-red/50 bg-neon-red/5" :
+                  turnResult === "checkout" ? "border border-accent-ink/50 bg-accent/5" :
+                  turnResult === "bust" ? "border border-danger-ink/50 bg-danger/5" :
                   "border border-transparent"
                 }`}>
                   <p className="text-[10px] text-muted uppercase tracking-widest mb-0.5">
@@ -260,8 +260,8 @@ export default function CheckoutTrainingPage() {
                       initial={{ scale: 0.85, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       className={`font-mono text-7xl font-bold ${
-                        turnResult === "checkout" ? "text-neon-green text-glow-green" :
-                        turnResult === "bust" ? "text-neon-red" :
+                        turnResult === "checkout" ? "text-accent-ink text-glow-green" :
+                        turnResult === "bust" ? "text-danger-ink" :
                         "text-foreground"
                       }`}
                     >
@@ -270,13 +270,13 @@ export default function CheckoutTrainingPage() {
                   </AnimatePresence>
 
                   {!turnResult && hint && (
-                    <p className="text-sm text-neon-yellow font-mono mt-2">{hint}</p>
+                    <p className="text-sm text-warn-ink font-mono mt-2">{hint}</p>
                   )}
                   {turnResult === "checkout" && (
-                    <p className="text-neon-green font-bold mt-1">Checkout! ({turnsLabel(turnsThisCheckout)})</p>
+                    <p className="text-accent-ink font-bold mt-1">Checkout! ({turnsLabel(turnsThisCheckout)})</p>
                   )}
                   {turnResult === "bust" && (
-                    <p className="text-neon-red font-bold mt-1">Bust – próba od nowa</p>
+                    <p className="text-danger-ink font-bold mt-1">Bust – próba od nowa</p>
                   )}
                 </div>
 
@@ -294,7 +294,7 @@ export default function CheckoutTrainingPage() {
                   <div className="mb-4">
                     <button
                       onClick={nextTarget}
-                      className="w-full rounded-2xl p-4 bg-neon-green text-background font-bold flex items-center justify-center gap-2 glow-green"
+                      className="w-full rounded-2xl p-4 bg-accent text-on-accent font-bold flex items-center justify-center gap-2 glow-green"
                     >
                       <Shuffle size={18} /> {selectMode === "custom" ? "Od nowa" : "Następny"}
                     </button>
@@ -333,9 +333,9 @@ export default function CheckoutTrainingPage() {
                           }}
                           className={`rounded-xl py-4 font-mono font-bold text-xl transition-all active:scale-95 ${
                             k === "✓"
-                              ? "bg-neon-green text-background glow-green"
+                              ? "bg-accent text-on-accent glow-green"
                               : k === "DEL"
-                              ? "glass text-neon-red"
+                              ? "glass text-danger-ink"
                               : "glass hover:border-border-bright"
                           }`}
                         >

@@ -31,16 +31,16 @@ export default function PlayerAvatar({
       <img
         src={avatarUrl}
         alt={displayName}
-        className={`${sizeClass} rounded-full object-cover shrink-0 shadow-lg ${className}`}
+        className={`${sizeClass} rounded-full object-cover shrink-0 ${className}`}
       />
     );
   }
 
   return (
     <div
-      className={`${sizeClass} rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center shrink-0 shadow-lg ${className}`}
+      className={`${sizeClass} rounded-full ${colorClass} flex items-center justify-center shrink-0 ${className}`}
     >
-      <span className="text-white font-bold drop-shadow">{initial}</span>
+      <span className="text-white font-bold">{initial}</span>
     </div>
   );
 }

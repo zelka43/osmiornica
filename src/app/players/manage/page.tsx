@@ -134,8 +134,8 @@ export default function PlayersManagePage() {
                   : `${players.length} ${players.length === 1 ? "gracz" : players.length < 5 ? "graczy" : "graczy"}`}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
-              <Users size={20} className="text-neon-purple" />
+            <div className="w-10 h-10 rounded-xl bg-extra/10 flex items-center justify-center">
+              <Users size={20} className="text-extra-ink" />
             </div>
           </div>
 
@@ -150,12 +150,12 @@ export default function PlayersManagePage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Imię gracza..."
                 maxLength={20}
-                className="flex-1 bg-surface rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted border border-border focus:border-neon-green/40 focus:outline-none focus:ring-1 focus:ring-neon-green/20 transition-colors"
+                className="flex-1 bg-surface rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted border border-border focus:border-accent-ink/40 focus:outline-none focus:ring-1 focus:ring-accent-ink/20 transition-colors"
               />
               <button
                 onClick={handleAdd}
                 disabled={!name.trim()}
-                className="px-5 py-3 rounded-xl bg-neon-green/15 text-neon-green font-semibold text-sm border border-neon-green/20 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neon-green/25"
+                className="px-5 py-3 rounded-xl bg-accent/15 text-accent-ink font-semibold text-sm border border-accent-ink/20 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-accent/25"
               >
                 <span className="hidden sm:inline">Dodaj</span>
                 <UserPlus size={18} className="sm:hidden" />
@@ -191,7 +191,7 @@ export default function PlayersManagePage() {
                       />
                     ) : (
                       <div
-                        className={`w-11 h-11 rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center shrink-0 shadow-lg`}
+                        className={`w-11 h-11 rounded-full ${colorClass} flex items-center justify-center shrink-0`}
                       >
                         <span className="text-white font-bold text-base drop-shadow">
                           {initial}
@@ -223,7 +223,7 @@ export default function PlayersManagePage() {
                     {/* Edit button */}
                     <button
                       onClick={() => openEdit(player)}
-                      className="p-2.5 rounded-xl bg-surface text-muted hover:text-neon-blue hover:bg-neon-blue/10 border border-transparent transition-all active:scale-90"
+                      className="p-2.5 rounded-xl bg-surface text-muted hover:text-info-ink hover:bg-info/10 border border-transparent transition-all active:scale-90"
                       title="Edytuj gracza"
                     >
                       <Pencil size={16} />
@@ -234,8 +234,8 @@ export default function PlayersManagePage() {
                       onClick={() => handleDelete(player.id)}
                       className={`p-2.5 rounded-xl transition-all active:scale-90 ${
                         isConfirming
-                          ? "bg-neon-red/20 text-neon-red border border-neon-red/30"
-                          : "bg-surface text-muted hover:text-neon-red hover:bg-neon-red/10 border border-transparent"
+                          ? "bg-danger/20 text-danger-ink border border-danger-ink/30"
+                          : "bg-surface text-muted hover:text-danger-ink hover:bg-danger/10 border border-transparent"
                       }`}
                       title={
                         isConfirming
@@ -304,16 +304,16 @@ export default function PlayersManagePage() {
                     <img
                       src={editingPlayer.avatarUrl}
                       alt={editingPlayer.displayName}
-                      className="w-24 h-24 rounded-full object-cover shadow-xl border-2 border-white/10"
+                      className="w-24 h-24 rounded-full object-cover shadow-xl border-2 border-foreground/10"
                     />
                   ) : (
                     <div
-                      className={`w-24 h-24 rounded-full bg-gradient-to-br ${
+                      className={`w-24 h-24 rounded-full ${
                         PLAYER_COLORS[
                           players.findIndex((p) => p.id === editingPlayer.id) %
                             PLAYER_COLORS.length
                         ]
-                      } flex items-center justify-center shadow-xl border-2 border-white/10`}
+                      } flex items-center justify-center shadow-xl border-2 border-foreground/10`}
                     >
                       <span className="text-white font-bold text-3xl drop-shadow">
                         {editingPlayer.displayName.charAt(0).toUpperCase()}
@@ -325,7 +325,7 @@ export default function PlayersManagePage() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-neon-blue flex items-center justify-center shadow-lg hover:bg-neon-blue/80 transition-all disabled:opacity-50"
+                    className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-info flex items-center justify-center shadow-lg hover:bg-info/80 transition-all disabled:opacity-50"
                   >
                     <Camera size={16} className="text-white" />
                   </button>
@@ -340,13 +340,13 @@ export default function PlayersManagePage() {
                 />
 
                 {uploading && (
-                  <p className="text-xs text-neon-blue animate-pulse">Przesyłanie...</p>
+                  <p className="text-xs text-info-ink animate-pulse">Przesyłanie...</p>
                 )}
 
                 {editingPlayer.avatarUrl && !uploading && (
                   <button
                     onClick={handleRemoveAvatar}
-                    className="text-xs text-neon-red hover:text-neon-red/80 transition-colors"
+                    className="text-xs text-danger-ink hover:text-danger-ink/80 transition-colors"
                   >
                     Usuń zdjęcie
                   </button>
@@ -365,12 +365,12 @@ export default function PlayersManagePage() {
                     onChange={(e) => setEditName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
                     maxLength={20}
-                    className="flex-1 bg-surface rounded-xl px-4 py-3 text-sm text-foreground border border-border focus:border-neon-green/40 focus:outline-none focus:ring-1 focus:ring-neon-green/20 transition-colors"
+                    className="flex-1 bg-surface rounded-xl px-4 py-3 text-sm text-foreground border border-border focus:border-accent-ink/40 focus:outline-none focus:ring-1 focus:ring-accent-ink/20 transition-colors"
                   />
                   <button
                     onClick={handleSaveName}
                     disabled={!editName.trim() || editName.trim() === editingPlayer.displayName}
-                    className="px-4 py-3 rounded-xl bg-neon-green/15 text-neon-green font-semibold text-sm border border-neon-green/20 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="px-4 py-3 rounded-xl bg-accent/15 text-accent-ink font-semibold text-sm border border-accent-ink/20 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <Check size={18} />
                   </button>

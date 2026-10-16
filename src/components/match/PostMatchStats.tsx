@@ -85,40 +85,40 @@ export default function PostMatchStats({ match, allPlayerIds, onClose, onRematch
             variants={item}
             className={`rounded-2xl p-4 space-y-3 ${
               ps.isWinner
-                ? "bg-neon-green/[0.06] border border-neon-green/20"
-                : "glass border border-white/5"
+                ? "bg-accent/[0.06] border border-accent-ink/20"
+                : "glass border border-foreground/5"
             }`}
           >
             {/* Player Name */}
             <div className="flex items-center gap-2.5">
               <div
-                className={`w-8 h-8 rounded-lg bg-gradient-to-br ${PLAYER_COLORS[ps.colorIdx]} flex items-center justify-center`}
+                className={`w-8 h-8 rounded-lg ${PLAYER_COLORS[ps.colorIdx]} flex items-center justify-center`}
               >
                 <span className="text-xs font-bold text-white">
                   {ps.name.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <span className={`text-sm font-bold ${ps.isWinner ? "text-neon-green" : "text-foreground"}`}>
+              <span className={`text-sm font-bold ${ps.isWinner ? "text-accent-ink" : "text-foreground"}`}>
                 {ps.name}
               </span>
-              {ps.isWinner && <Trophy size={16} className="text-neon-yellow" />}
+              {ps.isWinner && <Trophy size={16} className="text-warn-ink" />}
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-2">
-              <StatCell label="Średnia" value={ps.threeDartAvg.toFixed(1)} color="text-neon-blue" />
-              <StatCell label="Pierwsze 9" value={ps.first9Avg.toFixed(1)} color="text-neon-blue" />
+              <StatCell label="Średnia" value={ps.threeDartAvg.toFixed(1)} color="text-info-ink" />
+              <StatCell label="Pierwsze 9" value={ps.first9Avg.toFixed(1)} color="text-info-ink" />
               <StatCell label="Rzuty" value={`${ps.dartsThrown}`} color="text-foreground" />
-              <StatCell label="Checkout%" value={`${ps.checkoutPct.toFixed(0)}%`} color="text-neon-purple" />
+              <StatCell label="Checkout%" value={`${ps.checkoutPct.toFixed(0)}%`} color="text-extra-ink" />
               <StatCell
                 label="Double"
                 value={`${ps.doublesHit}/${ps.doublesAttempted}`}
-                color="text-neon-purple"
+                color="text-extra-ink"
               />
-              <StatCell label="Najw. tura" value={`${ps.highestTurn}`} color="text-neon-yellow" />
-              <StatCell label="180s" value={`${ps.oneEighties}`} color="text-neon-yellow" icon={<Zap size={12} />} />
-              <StatCell label="100+" value={`${ps.tonPlus}`} color="text-neon-green" icon={<Target size={12} />} />
-              <StatCell label="Pozostało" value={`${ps.remaining}`} color={ps.isWinner ? "text-neon-green" : "text-neon-red"} />
+              <StatCell label="Najw. tura" value={`${ps.highestTurn}`} color="text-warn-ink" />
+              <StatCell label="180s" value={`${ps.oneEighties}`} color="text-warn-ink" icon={<Zap size={12} />} />
+              <StatCell label="100+" value={`${ps.tonPlus}`} color="text-accent-ink" icon={<Target size={12} />} />
+              <StatCell label="Pozostało" value={`${ps.remaining}`} color={ps.isWinner ? "text-accent-ink" : "text-danger-ink"} />
             </div>
           </motion.div>
         );
@@ -130,7 +130,7 @@ export default function PostMatchStats({ match, allPlayerIds, onClose, onRematch
           {onRematch && (
             <button
               onClick={onRematch}
-              className="flex-1 rounded-2xl p-4 glass border border-neon-blue/30 text-neon-blue font-bold hover:bg-neon-blue/10 transition-all flex items-center justify-center gap-2"
+              className="flex-1 rounded-2xl p-4 glass border border-info-ink/30 text-info-ink font-bold hover:bg-info/10 transition-all flex items-center justify-center gap-2"
             >
               <Shuffle size={16} />
               Rewanż
@@ -138,7 +138,7 @@ export default function PostMatchStats({ match, allPlayerIds, onClose, onRematch
           )}
           <button
             onClick={onClose}
-            className={`${onRematch ? "flex-1" : "w-full"} rounded-2xl p-4 bg-neon-green text-background font-bold glow-green hover:bg-neon-green-dim transition-all`}
+            className={`${onRematch ? "flex-1" : "w-full"} rounded-2xl p-4 bg-accent text-on-accent font-bold glow-green hover:bg-accent-dim transition-all`}
           >
             Zamknij
           </button>

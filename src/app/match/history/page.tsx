@@ -127,8 +127,8 @@ export default function MatchHistoryPage() {
           {/* Title */}
           <motion.div variants={item} className="text-center pt-4 pb-2">
             <div className="flex items-center justify-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
-                <History size={22} className="text-neon-purple" />
+              <div className="w-10 h-10 rounded-xl bg-extra/10 flex items-center justify-center">
+                <History size={22} className="text-extra-ink" />
               </div>
               <h1 className="text-2xl font-bold text-foreground tracking-tight">
                 Historia meczów
@@ -171,7 +171,7 @@ export default function MatchHistoryPage() {
                       sessionStorage.setItem("history-scroll", String(window.scrollY));
                       router.push(`/match/history/${match.id}`);
                     }}
-                    className="glass rounded-2xl p-4 space-y-3 border border-white/5 hover:border-white/10 transition-colors cursor-pointer"
+                    className="glass rounded-2xl p-4 space-y-3 border border-foreground/5 hover:border-foreground/10 transition-colors cursor-pointer"
                   >
                     {/* Top Row: Date + Game Mode */}
                     <div className="flex items-center justify-between">
@@ -180,11 +180,11 @@ export default function MatchHistoryPage() {
                       </span>
                       <div className="flex items-center gap-1.5">
                         {(match.matchType ?? "ranked") === "friendly" && (
-                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-light text-neon-purple border border-neon-purple/20">
+                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-light text-extra-ink border border-extra-ink/20">
                             Towarzyski
                           </span>
                         )}
-                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-light text-neon-blue border border-neon-blue/20">
+                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-light text-info-ink border border-info-ink/20">
                           {match.gameMode}
                         </span>
                       </div>
@@ -205,21 +205,21 @@ export default function MatchHistoryPage() {
                             key={playerId}
                             className={`flex items-center justify-between rounded-xl px-3 py-2.5 transition-colors ${
                               isWinner
-                                ? "bg-neon-green/[0.06] border border-neon-green/15"
-                                : "bg-white/[0.02]"
+                                ? "bg-accent/[0.06] border border-accent-ink/15"
+                                : "bg-foreground/[0.02]"
                             }`}
                           >
                             <div className="flex items-center gap-2.5">
                               {isWinner && (
                                 <Trophy
                                   size={14}
-                                  className="text-neon-green shrink-0"
+                                  className="text-accent-ink shrink-0"
                                 />
                               )}
                               <span
                                 className={`text-sm font-medium ${
                                   isWinner
-                                    ? "text-neon-green"
+                                    ? "text-accent-ink"
                                     : "text-foreground"
                                 }`}
                               >
@@ -231,7 +231,7 @@ export default function MatchHistoryPage() {
                                 <span
                                   className={`font-mono text-sm font-bold ${
                                     isWinner
-                                      ? "text-neon-green"
+                                      ? "text-accent-ink"
                                       : "text-muted"
                                   }`}
                                 >
@@ -239,7 +239,7 @@ export default function MatchHistoryPage() {
                                 </span>
                               )}
                               {isWinner && (
-                                <span className="text-[10px] font-semibold text-neon-green uppercase tracking-wider">
+                                <span className="text-[10px] font-semibold text-accent-ink uppercase tracking-wider">
                                   Zwycięzca
                                 </span>
                               )}
@@ -270,7 +270,7 @@ export default function MatchHistoryPage() {
                       key={match.id}
                       variants={item}
                       className={`glass rounded-2xl p-4 space-y-3 border ${
-                        isActive ? "border-neon-yellow/15" : "border-neon-red/10"
+                        isActive ? "border-warn-ink/15" : "border-danger-ink/10"
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -281,8 +281,8 @@ export default function MatchHistoryPage() {
                           <span
                             className={`text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-light border ${
                               isActive
-                                ? "text-neon-yellow border-neon-yellow/20"
-                                : "text-neon-red border-neon-red/20"
+                                ? "text-warn-ink border-warn-ink/20"
+                                : "text-danger-ink border-danger-ink/20"
                             }`}
                           >
                             {isActive ? "W trakcie" : "Porzucony"}
@@ -292,7 +292,7 @@ export default function MatchHistoryPage() {
                           {isActive && confirmDeleteId !== match.id && (
                             <button
                               onClick={() => handleAbandon(match)}
-                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-neon-yellow/10 text-neon-yellow hover:bg-neon-yellow/20 transition-all"
+                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-warn/10 text-warn-ink hover:bg-warn/20 transition-all"
                             >
                               Porzuć
                             </button>
@@ -303,7 +303,7 @@ export default function MatchHistoryPage() {
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => handleDelete(match.id)}
-                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-neon-red/15 text-neon-red hover:bg-neon-red/25 transition-all"
+                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-danger/15 text-danger-ink hover:bg-danger/25 transition-all"
                               >
                                 Usuń
                               </button>
@@ -317,9 +317,9 @@ export default function MatchHistoryPage() {
                           ) : (
                             <button
                               onClick={() => setConfirmDeleteId(match.id)}
-                              className="p-1.5 rounded-lg hover:bg-neon-red/10 transition-all"
+                              className="p-1.5 rounded-lg hover:bg-danger/10 transition-all"
                             >
-                              <Trash2 size={14} className="text-muted hover:text-neon-red" />
+                              <Trash2 size={14} className="text-muted hover:text-danger-ink" />
                             </button>
                           )}
                         </div>
@@ -329,7 +329,7 @@ export default function MatchHistoryPage() {
                         {match.playerIds.map((playerId, idx) => (
                           <div
                             key={playerId}
-                            className="flex items-center justify-between rounded-xl px-3 py-2 bg-white/[0.02]"
+                            className="flex items-center justify-between rounded-xl px-3 py-2 bg-foreground/[0.02]"
                           >
                             <span className="text-sm text-muted">
                               {match.playerNames[idx]}

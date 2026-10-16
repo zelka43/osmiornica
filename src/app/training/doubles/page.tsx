@@ -96,8 +96,8 @@ export default function DoublesTrainingPage() {
             <button onClick={() => router.push("/match/new")} className="w-10 h-10 rounded-xl glass flex items-center justify-center">
               <ChevronLeft size={20} className="text-muted" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-neon-green/10 flex items-center justify-center">
-              <CircleDot className="text-neon-green" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+              <CircleDot className="text-accent-ink" size={20} />
             </div>
             <div>
               <h1 className="text-xl font-bold">Trening doubli</h1>
@@ -119,11 +119,11 @@ export default function DoublesTrainingPage() {
                       key={key}
                       onClick={() => setOrder(key)}
                       className={`w-full rounded-2xl p-4 flex items-center gap-4 transition-all duration-200 ${
-                        order === key ? "glass glow-green border border-neon-green/30" : "glass border border-transparent hover:border-border-bright"
+                        order === key ? "glass glow-green border border-accent-ink/30" : "glass border border-transparent hover:border-border-bright"
                       }`}
                     >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${order === key ? "border-neon-green" : "border-muted"}`}>
-                        {order === key && <div className="w-2 h-2 rounded-full bg-neon-green" />}
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${order === key ? "border-accent-ink" : "border-muted"}`}>
+                        {order === key && <div className="w-2 h-2 rounded-full bg-accent" />}
                       </div>
                       <div className="text-left">
                         <p className="font-semibold">{label}</p>
@@ -132,7 +132,7 @@ export default function DoublesTrainingPage() {
                     </button>
                   ))}
                 </div>
-                <button onClick={start} className="w-full rounded-2xl p-4 bg-neon-green text-background font-bold text-lg glow-green">
+                <button onClick={start} className="w-full rounded-2xl p-4 bg-accent text-on-accent font-bold text-lg glow-green">
                   Rozpocznij
                 </button>
               </motion.div>
@@ -143,17 +143,17 @@ export default function DoublesTrainingPage() {
                 {/* Progress */}
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted">Postęp</span>
-                  <span className="font-mono font-bold text-neon-green">{currentIdx + 1} / {sequence.length}</span>
+                  <span className="font-mono font-bold text-accent-ink">{currentIdx + 1} / {sequence.length}</span>
                 </div>
                 <div className="w-full h-1.5 bg-surface rounded-full mb-6">
-                  <div className="h-full bg-neon-green rounded-full transition-all duration-300" style={{ width: `${(currentIdx / sequence.length) * 100}%` }} />
+                  <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${(currentIdx / sequence.length) * 100}%` }} />
                 </div>
 
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   <div className="glass rounded-2xl p-3 text-center">
                     <p className="text-[10px] text-muted mb-1">Trafione</p>
-                    <p className="font-mono text-xl font-bold text-neon-green">{totalHits}</p>
+                    <p className="font-mono text-xl font-bold text-accent-ink">{totalHits}</p>
                   </div>
                   <div className="glass rounded-2xl p-3 text-center">
                     <p className="text-[10px] text-muted mb-1">Rzuty</p>
@@ -161,7 +161,7 @@ export default function DoublesTrainingPage() {
                   </div>
                   <div className="glass rounded-2xl p-3 text-center">
                     <p className="text-[10px] text-muted mb-1">Skutecz.</p>
-                    <p className="font-mono text-xl font-bold text-neon-blue">
+                    <p className="font-mono text-xl font-bold text-info-ink">
                       {totalAttempts > 0 ? Math.round((totalHits / totalAttempts) * 100) : 0}%
                     </p>
                   </div>
@@ -169,7 +169,7 @@ export default function DoublesTrainingPage() {
 
                 {/* Target */}
                 <div className={`glass rounded-2xl p-8 text-center mb-6 transition-all ${
-                  lastHit ? "border border-neon-green/30" : currentAttempts > 0 ? "border border-neon-red/20" : "border border-transparent"
+                  lastHit ? "border border-accent-ink/30" : currentAttempts > 0 ? "border border-danger-ink/20" : "border border-transparent"
                 }`}>
                   <p className="text-xs text-muted mb-2 uppercase tracking-widest">Cel</p>
                   <AnimatePresence mode="wait">
@@ -178,7 +178,7 @@ export default function DoublesTrainingPage() {
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 1.2, opacity: 0 }}
-                      className="font-mono text-6xl font-bold text-neon-green text-glow-green"
+                      className="font-mono text-6xl font-bold text-accent-ink text-glow-green"
                     >
                       {doubleLabel(sequence[currentIdx])}
                     </motion.p>
@@ -192,13 +192,13 @@ export default function DoublesTrainingPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => recordDart(false)}
-                    className="rounded-2xl p-5 glass border border-neon-red/30 text-neon-red font-bold text-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                    className="rounded-2xl p-5 glass border border-danger-ink/30 text-danger-ink font-bold text-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
                   >
                     <X size={22} /> Pudło
                   </button>
                   <button
                     onClick={() => recordDart(true)}
-                    className="rounded-2xl p-5 glass border border-neon-green/30 text-neon-green font-bold text-xl flex items-center justify-center gap-2 active:scale-95 transition-all glow-green"
+                    className="rounded-2xl p-5 glass border border-accent-ink/30 text-accent-ink font-bold text-xl flex items-center justify-center gap-2 active:scale-95 transition-all glow-green"
                   >
                     <Check size={22} /> Trafił
                   </button>
@@ -219,13 +219,13 @@ export default function DoublesTrainingPage() {
                   </div>
                   <div className="glass rounded-2xl p-4 text-center">
                     <p className="text-xs text-muted mb-1">Skutecz.</p>
-                    <p className="font-mono text-2xl font-bold text-neon-blue">
+                    <p className="font-mono text-2xl font-bold text-info-ink">
                       {Math.round((results.length / results.reduce((s, r) => s + r.attempts, 0)) * 100)}%
                     </p>
                   </div>
                   <div className="glass rounded-2xl p-4 text-center">
                     <p className="text-xs text-muted mb-1">Śr. rzutów</p>
-                    <p className="font-mono text-2xl font-bold text-neon-yellow">{avgAttempts}</p>
+                    <p className="font-mono text-2xl font-bold text-warn-ink">{avgAttempts}</p>
                   </div>
                 </div>
 
@@ -234,10 +234,10 @@ export default function DoublesTrainingPage() {
                   <div className="space-y-1">
                     {results.map((r, i) => (
                       <div key={i} className="flex items-center gap-3 text-sm">
-                        <span className="font-mono font-bold w-12 text-neon-green">{doubleLabel(r.target)}</span>
+                        <span className="font-mono font-bold w-12 text-accent-ink">{doubleLabel(r.target)}</span>
                         <div className="flex-1 h-1.5 bg-surface rounded-full">
                           <div
-                            className="h-full bg-neon-green rounded-full"
+                            className="h-full bg-accent rounded-full"
                             style={{ width: `${Math.min(100, (1 / r.attempts) * 100)}%` }}
                           />
                         </div>

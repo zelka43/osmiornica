@@ -167,8 +167,8 @@ export default function FriendlyMatchPage() {
             >
               <ChevronLeft size={20} className="text-muted" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
-              <Users className="text-neon-purple" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-extra/10 flex items-center justify-center">
+              <Users className="text-extra-ink" size={20} />
             </div>
             <div>
               <h1 className="text-xl font-bold">Gra towarzyska</h1>
@@ -186,13 +186,13 @@ export default function FriendlyMatchPage() {
                   onClick={() => setGameMode(mode)}
                   className={`relative rounded-2xl p-4 text-center transition-all duration-200 ${
                     gameMode === mode
-                      ? "glass glow-green border border-neon-green/30"
+                      ? "glass glow-green border border-accent-ink/30"
                       : "glass border border-transparent hover:border-border-bright"
                   }`}
                 >
                   <span
                     className={`font-mono text-3xl font-bold ${
-                      gameMode === mode ? "text-neon-green text-glow-green" : "text-foreground"
+                      gameMode === mode ? "text-accent-ink text-glow-green" : "text-foreground"
                     }`}
                   >
                     {mode}
@@ -219,7 +219,7 @@ export default function FriendlyMatchPage() {
                       key={mode}
                       onClick={() => handleOrderModeChange(mode)}
                       className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
-                        orderMode === mode ? "bg-neon-blue/15 text-neon-blue" : "text-muted"
+                        orderMode === mode ? "bg-info/15 text-info-ink" : "text-muted"
                       }`}
                     >
                       {label}
@@ -241,7 +241,7 @@ export default function FriendlyMatchPage() {
                     whileTap={{ scale: 0.98 }}
                     className={`w-full flex items-center gap-3 rounded-2xl p-3 transition-all duration-200 ${
                       isSelected
-                        ? "glass glow-green border border-neon-green/20"
+                        ? "glass glow-green border border-accent-ink/20"
                         : "glass border border-transparent hover:border-border-bright"
                     }`}
                   >
@@ -256,9 +256,9 @@ export default function FriendlyMatchPage() {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="w-7 h-7 rounded-full bg-neon-green flex items-center justify-center"
+                        className="w-7 h-7 rounded-full bg-accent flex items-center justify-center"
                       >
-                        <span className="text-background font-bold text-xs">{orderIndex + 1}</span>
+                        <span className="text-on-accent font-bold text-xs">{orderIndex + 1}</span>
                       </motion.div>
                     )}
                   </motion.button>
@@ -278,7 +278,7 @@ export default function FriendlyMatchPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className={`flex items-center gap-3 rounded-2xl p-3 transition-all duration-200 ${
                       isSelected
-                        ? "glass glow-green border border-neon-green/20"
+                        ? "glass glow-green border border-accent-ink/20"
                         : "glass border border-transparent"
                     }`}
                   >
@@ -295,9 +295,9 @@ export default function FriendlyMatchPage() {
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="w-7 h-7 rounded-full bg-neon-green flex items-center justify-center"
+                          className="w-7 h-7 rounded-full bg-accent flex items-center justify-center"
                         >
-                          <span className="text-background font-bold text-xs">{orderIndex + 1}</span>
+                          <span className="text-on-accent font-bold text-xs">{orderIndex + 1}</span>
                         </motion.div>
                       )}
                     </button>
@@ -330,7 +330,7 @@ export default function FriendlyMatchPage() {
                 disabled={!guestInput.trim()}
                 className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
                   guestInput.trim()
-                    ? "bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30"
+                    ? "bg-extra/20 text-extra-ink hover:bg-extra/30"
                     : "bg-surface text-muted cursor-not-allowed"
                 }`}
               >
@@ -356,7 +356,7 @@ export default function FriendlyMatchPage() {
                       key={id}
                       className="glass-light rounded-full px-3 py-1.5 text-sm flex items-center gap-1.5"
                     >
-                      <span className="text-neon-green font-mono text-xs">{i + 1}.</span>
+                      <span className="text-accent-ink font-mono text-xs">{i + 1}.</span>
                       {entry.displayName}
                       {entry.isGuest && (
                         <span className="text-[10px] text-muted">(gość)</span>
@@ -375,7 +375,7 @@ export default function FriendlyMatchPage() {
             whileTap={selectedIds.length >= 2 ? { scale: 0.97 } : undefined}
             className={`w-full rounded-2xl p-4 flex items-center justify-center gap-2 font-bold text-lg transition-all duration-200 ${
               selectedIds.length >= 2
-                ? "bg-neon-green text-background glow-green hover:bg-neon-green-dim active:bg-neon-green-dim"
+                ? "bg-accent text-on-accent glow-green hover:bg-accent-dim active:bg-accent-dim"
                 : "bg-surface text-muted cursor-not-allowed"
             }`}
           >

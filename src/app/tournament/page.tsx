@@ -116,8 +116,8 @@ export default function TournamentListPage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-neon-yellow/10 flex items-center justify-center">
-              <Trophy className="text-neon-yellow" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-warn/10 flex items-center justify-center">
+              <Trophy className="text-warn-ink" size={20} />
             </div>
             <div className="flex-1">
               <h1 className="text-xl font-bold">Turnieje</h1>
@@ -128,9 +128,9 @@ export default function TournamentListPage() {
           {!creating && (
             <button
               onClick={() => setCreating(true)}
-              className="w-full glass glow-green border border-neon-green/30 rounded-2xl p-4 flex items-center gap-3 mb-6"
+              className="w-full glass glow-green border border-accent-ink/30 rounded-2xl p-4 flex items-center gap-3 mb-6"
             >
-              <Trophy className="text-neon-green" size={20} />
+              <Trophy className="text-accent-ink" size={20} />
               <span className="font-bold">Nowy turniej</span>
               <ChevronRight size={18} className="text-muted ml-auto" />
             </button>
@@ -149,7 +149,7 @@ export default function TournamentListPage() {
                       onClick={() => setGameMode(mode)}
                       className={`rounded-2xl p-3 text-center font-bold transition-all ${
                         gameMode === mode
-                          ? "glass glow-green border border-neon-green/30 text-neon-green"
+                          ? "glass glow-green border border-accent-ink/30 text-accent-ink"
                           : "glass border border-transparent text-muted"
                       }`}
                     >
@@ -171,7 +171,7 @@ export default function TournamentListPage() {
                       onClick={() => setLegsToWin(n)}
                       className={`rounded-xl py-2 font-bold transition-all ${
                         legsToWin === n
-                          ? "glass glow-green border border-neon-green/30 text-neon-green"
+                          ? "glass glow-green border border-accent-ink/30 text-accent-ink"
                           : "glass border border-transparent text-muted"
                       }`}
                     >
@@ -189,7 +189,7 @@ export default function TournamentListPage() {
                     onClick={() => setSeeding("rating")}
                     className={`rounded-2xl p-3 flex items-center justify-center gap-2 font-semibold transition-all ${
                       seeding === "rating"
-                        ? "glass glow-green border border-neon-green/30 text-neon-green"
+                        ? "glass glow-green border border-accent-ink/30 text-accent-ink"
                         : "glass border border-transparent text-muted"
                     }`}
                   >
@@ -199,7 +199,7 @@ export default function TournamentListPage() {
                     onClick={() => setSeeding("random")}
                     className={`rounded-2xl p-3 flex items-center justify-center gap-2 font-semibold transition-all ${
                       seeding === "random"
-                        ? "glass glow-green border border-neon-green/30 text-neon-green"
+                        ? "glass glow-green border border-accent-ink/30 text-accent-ink"
                         : "glass border border-transparent text-muted"
                     }`}
                   >
@@ -223,13 +223,13 @@ export default function TournamentListPage() {
                         key={p.id}
                         onClick={() => togglePlayer(p.id)}
                         className={`w-full glass rounded-2xl p-3 flex items-center gap-3 transition-all ${
-                          selected ? "border border-neon-green/40 glow-green" : "border border-transparent"
+                          selected ? "border border-accent-ink/40 glow-green" : "border border-transparent"
                         }`}
                       >
                         <PlayerAvatar avatarUrl={p.avatarUrl} displayName={p.displayName} colorIndex={colorIndex} size="sm" />
                         <span className="font-medium flex-1 text-left">{p.displayName}</span>
                         {selected && (
-                          <span className="w-6 h-6 rounded-full bg-neon-green text-background text-xs font-bold flex items-center justify-center">
+                          <span className="w-6 h-6 rounded-full bg-accent text-on-accent text-xs font-bold flex items-center justify-center">
                             {idx + 1}
                           </span>
                         )}
@@ -253,7 +253,7 @@ export default function TournamentListPage() {
                 <button
                   onClick={handleCreate}
                   disabled={selectedIds.length < MIN_PLAYERS}
-                  className="flex-1 rounded-2xl p-3 font-bold bg-neon-green text-background glow-green disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-2xl p-3 font-bold bg-accent text-on-accent glow-green disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Start ({selectedIds.length})
                 </button>
@@ -265,7 +265,7 @@ export default function TournamentListPage() {
           {!creating && tournamentTable.length > 0 && (
             <div className="glass rounded-2xl p-4 mb-6">
               <div className="flex items-center gap-2 mb-3">
-                <BarChart3 size={16} className="text-neon-yellow" />
+                <BarChart3 size={16} className="text-warn-ink" />
                 <h2 className="text-sm font-bold">Tabela turniejowa</h2>
               </div>
               <div className="overflow-x-auto">
@@ -291,7 +291,7 @@ export default function TournamentListPage() {
                             <div className="flex items-center gap-2 min-w-0">
                               <span
                                 className={`w-4 text-center font-mono font-bold shrink-0 ${
-                                  i === 0 ? "text-neon-yellow" : "text-muted"
+                                  i === 0 ? "text-warn-ink" : "text-muted"
                                 }`}
                               >
                                 {i + 1}
@@ -311,7 +311,7 @@ export default function TournamentListPage() {
                           </td>
                           <td
                             className={`text-center py-2 px-1 font-mono font-bold ${
-                              row.titles > 0 ? "text-neon-yellow" : "text-muted"
+                              row.titles > 0 ? "text-warn-ink" : "text-muted"
                             }`}
                           >
                             {row.titles}
@@ -351,8 +351,8 @@ export default function TournamentListPage() {
                     className="w-full glass rounded-2xl p-4 flex items-center gap-3"
                   >
                     <button onClick={() => router.push(`/tournament/${t.id}`)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t.status === "completed" ? "bg-neon-yellow/10" : "bg-neon-green/10"}`}>
-                        <Trophy className={t.status === "completed" ? "text-neon-yellow" : "text-neon-green"} size={18} />
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t.status === "completed" ? "bg-warn/10" : "bg-accent/10"}`}>
+                        <Trophy className={t.status === "completed" ? "text-warn-ink" : "text-accent-ink"} size={18} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold truncate">{t.name}</p>
@@ -363,7 +363,7 @@ export default function TournamentListPage() {
                       </div>
                       <ChevronRight size={18} className="text-muted shrink-0" />
                     </button>
-                    <button onClick={() => handleDelete(t.id)} className="text-muted hover:text-neon-red p-1 shrink-0">
+                    <button onClick={() => handleDelete(t.id)} className="text-muted hover:text-danger-ink p-1 shrink-0">
                       <Trash2 size={16} />
                     </button>
                   </div>

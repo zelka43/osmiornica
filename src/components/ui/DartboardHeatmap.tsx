@@ -263,8 +263,8 @@ export default function DartboardHeatmap({ matches, playerId }: DartboardHeatmap
                 const pct = d.attempts > 0 ? (d.hits / d.attempts) * 100 : 0;
                 return (
                   <div key={d.label} className="grid grid-cols-[3rem_1fr_5rem_4rem] gap-x-2 items-center px-1">
-                    <span className="text-xs font-mono font-semibold text-neon-green">{d.label}</span>
-                    <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <span className="text-xs font-mono font-semibold text-accent-ink">{d.label}</span>
+                    <div className="h-1.5 rounded-full bg-foreground/5 overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${(d.attempts / maxAttempts) * 100}%`, background: COLOR_DOUBLE, opacity: 0.6 }}
@@ -273,7 +273,7 @@ export default function DartboardHeatmap({ matches, playerId }: DartboardHeatmap
                     <span className="text-[11px] font-mono text-right text-foreground">
                       {d.hits}/{d.attempts}
                     </span>
-                    <span className="text-[11px] font-mono text-right text-neon-purple">
+                    <span className="text-[11px] font-mono text-right text-extra-ink">
                       {pct.toFixed(1)}%
                     </span>
                   </div>

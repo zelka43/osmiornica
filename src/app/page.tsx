@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Target, Plus, Trophy, Users, Clock, Crown } from "lucide-react";
+import { Target, Plus, Trophy, Users, Clock, Crown, Settings } from "lucide-react";
 import NavBar from "@/components/ui/NavBar";
 import { getPlayers, getMatches, getActiveMatch } from "@/lib/store";
 import type { Match } from "@/types";
@@ -109,10 +109,17 @@ export default function DashboardPage() {
           className="max-w-lg mx-auto space-y-6"
         >
           {/* Title */}
-          <motion.div variants={item} className="text-center pt-4 pb-2">
+          <motion.div variants={item} className="relative text-center pt-4 pb-2">
+            <Link
+              href="/settings"
+              aria-label="Ustawienia"
+              className="absolute right-0 top-2 w-11 h-11 rounded-xl flex items-center justify-center text-muted hover:text-foreground transition-colors"
+            >
+              <Settings size={20} />
+            </Link>
             <h1
               onClick={handleTitleTap}
-              className="text-3xl font-bold tracking-tight text-glow-green text-neon-green cursor-default select-none"
+              className="text-3xl font-bold tracking-tight text-glow-green text-accent-ink cursor-default select-none"
             >
               OŚMIORNICA
             </h1>
@@ -125,13 +132,13 @@ export default function DashboardPage() {
           {activeMatch && (
             <motion.div variants={item}>
               <Link href={`/match/${activeMatch.id}`}>
-                <div className="glass rounded-2xl p-5 glow-green border border-neon-green/20 pulse-active transition-transform active:scale-[0.98]">
+                <div className="glass rounded-2xl p-5 glow-green border border-accent-ink/20 pulse-active transition-transform active:scale-[0.98]">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-neon-green/10 flex items-center justify-center">
-                      <Target size={20} className="text-neon-green" />
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                      <Target size={20} className="text-accent-ink" />
                     </div>
                     <div>
-                      <p className="text-xs text-neon-green font-semibold uppercase tracking-wider">
+                      <p className="text-xs text-accent-ink font-semibold uppercase tracking-wider">
                         Aktywny mecz
                       </p>
                       <p className="text-foreground font-medium">
@@ -144,7 +151,7 @@ export default function DashboardPage() {
                       {activeMatch.gameMode} &middot;{" "}
                       {formatDate(activeMatch.createdAt)}
                     </span>
-                    <span className="text-neon-green text-sm font-semibold">
+                    <span className="text-accent-ink text-sm font-semibold">
                       Kontynuuj mecz &rarr;
                     </span>
                   </div>
@@ -156,10 +163,10 @@ export default function DashboardPage() {
           {/* New Match Button */}
           <motion.div variants={item}>
             <Link href="/match/new">
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-neon-green/10 to-neon-blue/10 border border-neon-green/20 p-5 transition-all active:scale-[0.98] hover:border-neon-green/30">
+              <div className="relative overflow-hidden rounded-2xl bg-accent/10 border border-accent-ink/20 p-5 transition-all active:scale-[0.98] hover:border-accent-ink/30">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-neon-green/15 flex items-center justify-center shrink-0">
-                    <Plus size={24} className="text-neon-green" />
+                  <div className="w-12 h-12 rounded-2xl bg-accent/15 flex items-center justify-center shrink-0">
+                    <Plus size={24} className="text-accent-ink" />
                   </div>
                   <div>
                     <p className="text-lg font-bold text-foreground">
@@ -170,7 +177,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-neon-green/5 blur-2xl" />
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-accent/5 blur-2xl" />
               </div>
             </Link>
           </motion.div>
@@ -178,8 +185,8 @@ export default function DashboardPage() {
           {/* Quick Stats */}
           <motion.div variants={item} className="grid grid-cols-2 gap-3">
             <div className="glass rounded-2xl p-4 text-center">
-              <div className="w-9 h-9 rounded-xl bg-neon-blue/10 flex items-center justify-center mx-auto mb-2">
-                <Trophy size={18} className="text-neon-blue" />
+              <div className="w-9 h-9 rounded-xl bg-info/10 flex items-center justify-center mx-auto mb-2">
+                <Trophy size={18} className="text-info-ink" />
               </div>
               <p className="text-2xl font-bold font-mono text-foreground">
                 {completedCount}
@@ -187,8 +194,8 @@ export default function DashboardPage() {
               <p className="text-muted text-xs mt-0.5">Rozegrane mecze</p>
             </div>
             <div className="glass rounded-2xl p-4 text-center">
-              <div className="w-9 h-9 rounded-xl bg-neon-purple/10 flex items-center justify-center mx-auto mb-2">
-                <Users size={18} className="text-neon-purple" />
+              <div className="w-9 h-9 rounded-xl bg-extra/10 flex items-center justify-center mx-auto mb-2">
+                <Users size={18} className="text-extra-ink" />
               </div>
               <p className="text-2xl font-bold font-mono text-foreground">
                 {playerCount}
@@ -235,8 +242,8 @@ export default function DashboardPage() {
                       </p>
                       {match.winnerName ? (
                         <div className="flex items-center gap-1">
-                          <Crown size={12} className="text-neon-yellow" />
-                          <span className="text-xs font-semibold text-neon-yellow">
+                          <Crown size={12} className="text-warn-ink" />
+                          <span className="text-xs font-semibold text-warn-ink">
                             {match.winnerName}
                           </span>
                         </div>

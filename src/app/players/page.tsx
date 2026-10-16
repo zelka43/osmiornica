@@ -73,25 +73,25 @@ function computeRatingValue(player: Player, matches: Match[], mode: RankingMode)
 }
 
 const RING_BY_RANK: Record<number, string> = {
-  1: "ring-4 ring-yellow-400 shadow-[0_0_20px_6px_rgba(250,204,21,0.55)]",
-  2: "ring-4 ring-gray-300 shadow-[0_0_16px_4px_rgba(209,213,219,0.4)]",
-  3: "ring-4 ring-amber-600 shadow-[0_0_14px_4px_rgba(217,119,6,0.4)]",
+  1: "ring-4 ring-yellow-400",
+  2: "ring-4 ring-gray-300",
+  3: "ring-4 ring-amber-600",
 };
 
 const ACHIEVEMENT_META: Record<AchievementKey, { label: string; icon: React.ElementType; color: string; unit?: string }> = {
-  mostMatches:     { label: "Najwięcej meczów",    icon: Target,    color: "text-neon-blue",   unit: "" },
-  mostWins:        { label: "Najwięcej zwycięstw",  icon: Trophy,    color: "text-neon-green",  unit: "" },
-  mostTonPlus:     { label: "Najwięcej 100+",       icon: Zap,       color: "text-neon-yellow", unit: "" },
-  most180s:        { label: "Najwięcej 180",        icon: Star,      color: "text-neon-yellow", unit: "" },
-  mostT20T19:      { label: "Najwięcej T20/T19",    icon: Flame,     color: "text-neon-red",    unit: "" },
-  longestStreak:   { label: "Najdłuższa seria",     icon: Crown,     color: "text-neon-purple", unit: "" },
-  bestFirst9:      { label: "Najlepszy First 9",    icon: TrendingUp, color: "text-neon-blue",  unit: "" },
-  bestAvg:         { label: "Najlepsza średnia",    icon: BarChart,  color: "text-neon-green",  unit: "" },
-  bestCheckoutPct:   { label: "Najlepszy CO%",        icon: Award,          color: "text-neon-purple", unit: "%" },
-  most26s:           { label: "Najwięcej 26",         icon: Hash,           color: "text-neon-blue",   unit: "" },
-  highestCheckout:   { label: "Najwyższy checkout",   icon: Crosshair,      color: "text-neon-red",    unit: "" },
-  mostMonthlyTitles: { label: "Gracz miesiąca",       icon: CalendarDays,   color: "text-neon-yellow", unit: "" },
-  mostWeeklyTitles:  { label: "Gracz tygodnia",       icon: CalendarCheck2, color: "text-neon-green",  unit: "" },
+  mostMatches:     { label: "Najwięcej meczów",    icon: Target,    color: "text-info-ink",   unit: "" },
+  mostWins:        { label: "Najwięcej zwycięstw",  icon: Trophy,    color: "text-accent-ink",  unit: "" },
+  mostTonPlus:     { label: "Najwięcej 100+",       icon: Zap,       color: "text-warn-ink", unit: "" },
+  most180s:        { label: "Najwięcej 180",        icon: Star,      color: "text-warn-ink", unit: "" },
+  mostT20T19:      { label: "Najwięcej T20/T19",    icon: Flame,     color: "text-danger-ink",    unit: "" },
+  longestStreak:   { label: "Najdłuższa seria",     icon: Crown,     color: "text-extra-ink", unit: "" },
+  bestFirst9:      { label: "Najlepszy First 9",    icon: TrendingUp, color: "text-info-ink",  unit: "" },
+  bestAvg:         { label: "Najlepsza średnia",    icon: BarChart,  color: "text-accent-ink",  unit: "" },
+  bestCheckoutPct:   { label: "Najlepszy CO%",        icon: Award,          color: "text-extra-ink", unit: "%" },
+  most26s:           { label: "Najwięcej 26",         icon: Hash,           color: "text-info-ink",   unit: "" },
+  highestCheckout:   { label: "Najwyższy checkout",   icon: Crosshair,      color: "text-danger-ink",    unit: "" },
+  mostMonthlyTitles: { label: "Gracz miesiąca",       icon: CalendarDays,   color: "text-warn-ink", unit: "" },
+  mostWeeklyTitles:  { label: "Gracz tygodnia",       icon: CalendarCheck2, color: "text-accent-ink",  unit: "" },
 };
 
 // Placeholder component used in ACHIEVEMENT_META (replaced below)
@@ -251,7 +251,7 @@ export default function PlayersPage() {
           <p className="text-muted text-sm text-center">Brak graczy.<br />Dodaj graczy w ustawieniach.</p>
           <button
             onClick={() => router.push("/players/manage")}
-            className="mt-4 px-4 py-2 rounded-xl bg-neon-green/10 text-neon-green text-sm font-medium"
+            className="mt-4 px-4 py-2 rounded-xl bg-accent/10 text-accent-ink text-sm font-medium"
           >
             Zarządzaj graczami
           </button>
@@ -305,9 +305,9 @@ export default function PlayersPage() {
             {/* Rank badge */}
             {allTimeRing && (
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                allTimeRing === 1 ? "bg-yellow-400/15 text-yellow-400" :
-                allTimeRing === 2 ? "bg-gray-300/15 text-gray-300" :
-                allTimeRing === 3 ? "bg-amber-600/15 text-amber-500" :
+                allTimeRing === 1 ? "bg-yellow-400/15 text-yellow-400 drog:text-amber-700" :
+                allTimeRing === 2 ? "bg-gray-300/15 text-gray-300 drog:text-gray-600" :
+                allTimeRing === 3 ? "bg-amber-600/15 text-amber-500 drog:text-amber-700" :
                 "bg-surface text-muted"
               }`}>
                 #{allTimeRing} all-time
@@ -319,7 +319,7 @@ export default function PlayersPage() {
               <select
                 value={selectedId ?? ""}
                 onChange={(e) => setSelectedId(e.target.value)}
-                className="w-full appearance-none bg-surface border border-white/10 rounded-xl px-4 py-3 pr-8 text-sm text-foreground focus:outline-none focus:border-neon-green/30"
+                className="w-full appearance-none bg-surface border border-foreground/10 rounded-xl px-4 py-3 pr-8 text-sm text-foreground focus:outline-none focus:border-accent-ink/30"
               >
                 {players.map((p) => {
                   const r = allTimeRingMap[p.id];
@@ -398,11 +398,11 @@ export default function PlayersPage() {
                       <p className="text-sm font-semibold text-foreground">{nemesisOfiara.nemesis.player?.displayName ?? "?"}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-mono text-neon-red">
+                  <span className="text-xs font-mono text-danger-ink">
                     {nemesisOfiara.nemesis.myWins}W – {nemesisOfiara.nemesis.oppWins}L
                   </span>
                 </div>
-                <div className="border-t border-white/5" />
+                <div className="border-t border-foreground/5" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-base">🎯</span>
@@ -411,7 +411,7 @@ export default function PlayersPage() {
                       <p className="text-sm font-semibold text-foreground">{nemesisOfiara.ofiara.player?.displayName ?? "?"}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-mono text-neon-green">
+                  <span className="text-xs font-mono text-accent-ink">
                     {nemesisOfiara.ofiara.myWins}W – {nemesisOfiara.ofiara.oppWins}L
                   </span>
                 </div>
@@ -420,7 +420,7 @@ export default function PlayersPage() {
           )}
 
           {/* separator */}
-          <div className="border-t border-white/5" />
+          <div className="border-t border-foreground/5" />
 
           {/* ── SECTION 3: Period trophies ── */}
           {selected && periodTitles && (
@@ -435,7 +435,7 @@ export default function PlayersPage() {
                   ]
                 ).map(({ key, label, medals }) => {
                   const hasAny = medals.gold > 0 || medals.silver > 0 || medals.bronze > 0;
-                  const topColor = medals.gold > 0 ? "text-yellow-400" : medals.silver > 0 ? "text-gray-300" : medals.bronze > 0 ? "text-amber-600" : "text-muted";
+                  const topColor = medals.gold > 0 ? "text-yellow-400 drog:text-amber-700" : medals.silver > 0 ? "text-gray-300 drog:text-gray-600" : medals.bronze > 0 ? "text-amber-600 drog:text-amber-800" : "text-muted";
                   const topCount = medals.gold > 0 ? medals.gold : medals.silver > 0 ? medals.silver : medals.bronze;
                   const isOpen = openTrophyPanel === key;
                   return (
@@ -467,20 +467,20 @@ export default function PlayersPage() {
                         <p className="text-xs font-semibold text-muted">Gracz {label} — wszystkie medale</p>
                         {medals.gold > 0 && (
                           <div className="flex items-center gap-2">
-                            <Trophy size={16} className="text-yellow-400" />
-                            <span className="text-xs text-foreground">Złote: <span className="font-bold text-yellow-400">×{medals.gold}</span></span>
+                            <Trophy size={16} className="text-yellow-400 drog:text-amber-700" />
+                            <span className="text-xs text-foreground">Złote: <span className="font-bold text-yellow-400 drog:text-amber-700">×{medals.gold}</span></span>
                           </div>
                         )}
                         {medals.silver > 0 && (
                           <div className="flex items-center gap-2">
-                            <Trophy size={16} className="text-gray-300" />
-                            <span className="text-xs text-foreground">Srebrne: <span className="font-bold text-gray-300">×{medals.silver}</span></span>
+                            <Trophy size={16} className="text-gray-300 drog:text-gray-600" />
+                            <span className="text-xs text-foreground">Srebrne: <span className="font-bold text-gray-300 drog:text-gray-600">×{medals.silver}</span></span>
                           </div>
                         )}
                         {medals.bronze > 0 && (
                           <div className="flex items-center gap-2">
-                            <Trophy size={16} className="text-amber-600" />
-                            <span className="text-xs text-foreground">Brązowe: <span className="font-bold text-amber-600">×{medals.bronze}</span></span>
+                            <Trophy size={16} className="text-amber-600 drog:text-amber-800" />
+                            <span className="text-xs text-foreground">Brązowe: <span className="font-bold text-amber-600 drog:text-amber-800">×{medals.bronze}</span></span>
                           </div>
                         )}
                         {medals.gold === 0 && medals.silver === 0 && medals.bronze === 0 && (
@@ -495,7 +495,7 @@ export default function PlayersPage() {
           )}
 
           {/* separator */}
-          <div className="border-t border-white/5" />
+          <div className="border-t border-foreground/5" />
 
           {/* ── SECTION 4: Achievement trophies ── */}
           {selected && (
@@ -585,7 +585,7 @@ export default function PlayersPage() {
                       <div
                         key={r.playerId}
                         className={`flex items-center gap-3 rounded-xl px-3 py-2 ${
-                          isFirst ? "bg-neon-green/[0.06] border border-neon-green/20" : "bg-surface/50"
+                          isFirst ? "bg-accent/[0.06] border border-accent-ink/20" : "bg-surface/50"
                         }`}
                       >
                         <span className="text-xs font-mono text-muted w-5 text-center">{idx + 1}</span>
@@ -595,10 +595,10 @@ export default function PlayersPage() {
                           colorIndex={pColorIdx}
                           size="sm"
                         />
-                        <span className={`flex-1 text-sm font-medium truncate ${isFirst ? "text-neon-green" : "text-foreground"}`}>
+                        <span className={`flex-1 text-sm font-medium truncate ${isFirst ? "text-accent-ink" : "text-foreground"}`}>
                           {p.displayName}
                         </span>
-                        <span className={`font-mono text-sm font-bold ${isFirst ? "text-neon-green" : "text-muted"}`}>
+                        <span className={`font-mono text-sm font-bold ${isFirst ? "text-accent-ink" : "text-muted"}`}>
                           {displayValue}
                         </span>
                       </div>
@@ -617,7 +617,7 @@ function StatTile({ label, value, highlight }: { label: string; value: string | 
   return (
     <div className="bg-surface/60 rounded-xl px-3 py-2.5 flex flex-col gap-0.5">
       <span className="text-[10px] text-muted uppercase tracking-wider">{label}</span>
-      <span className={`font-mono text-lg font-bold ${highlight ? "text-neon-green" : "text-foreground"}`}>
+      <span className={`font-mono text-lg font-bold ${highlight ? "text-accent-ink" : "text-foreground"}`}>
         {value}
       </span>
     </div>

@@ -1,15 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Asap } from "next/font/google";
+import { THEME_COLOR, THEME_INIT_SCRIPT } from "@/lib/theme";
+import ThemeSync from "@/components/ui/ThemeSync";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin", "latin-ext"],
 });
 
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin", "latin-ext"],
+});
+
+const asap = Asap({
+  variable: "--font-asap",
+  subsets: ["latin", "latin-ext"],
 });
 
 export const metadata: Metadata = {
@@ -32,7 +39,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0a0a0f",
+  themeColor: THEME_COLOR.odswiezony,
 };
 
 export default function RootLayout({
@@ -43,9 +50,15 @@ export default function RootLayout({
   return (
     <html
       lang="pl"
-      className={`${inter.variable} ${jetbrains.variable} h-full`}
+      className={`${geist.variable} ${geistMono.variable} ${asap.variable} h-full`}
+      // data-theme ustawia skrypt przed hydracją
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col antialiased mesh-bg">
+        <ThemeSync />
         {children}
       </body>
     </html>

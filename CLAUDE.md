@@ -34,6 +34,7 @@ src/app/
   tournament/, tournament/[id]  drabinka pucharowa 3–8 graczy
   duel/                     pojedynki 1v1
   training/*                5 trybów treningowych (checkout/single/double/triple/punkty)
+  settings/page.tsx         ustawienia: wybór wyglądu (zębatka na ekranie startowym)
   dev/page.tsx              panel admina (hasło "dart2024" w kodzie — tylko kosmetyka)
 src/lib/
   store.ts                  JEDYNA warstwa dostępu do Supabase (CRUD + mapowanie pól)
@@ -129,11 +130,14 @@ Turniejowe/duel legi mają `matchType !== "ranked"` — stary kod bez filtra to 
   - stan wyliczalny derivuj w renderze zamiast useEffect.
 - **Live sync**: Supabase Realtime (`subscribeToMatch`) + fallback polling 30 s.
   Wymaga publikacji `supabase_realtime` dla tabeli `matches` (sekcja 5 schematu).
-- **localStorage/sessionStorage/IndexedDB**: `dart_input_mode`, `dart_voice_lang`,
+- **localStorage/sessionStorage/IndexedDB**: `dart_theme`, `dart_input_mode`, `dart_voice_lang`,
   `dart_unsaved_match`, IndexedDB `osmiornica-cache`,
   `history-cache`, `history-scroll`. Goście mają id `guest_*` (pomijani w statystykach).
-- Design system: klasa `glass`, kolory `neon-green/yellow/red/blue/purple`,
-  font Inter + JetBrains Mono — wszystko w `globals.css` (@theme Tailwind 4).
+- **Design system i motywy: patrz DESIGN.md.** Dwa motywy (Odświeżony / Drogowskaz),
+  tokeny w `globals.css`. Kolory przez role: `bg-accent` (wypełnienie), `text-accent-ink` /
+  `border-accent-ink` (tekst/linie), `text-on-accent` (tekst na wypełnieniu); to samo dla
+  `danger/warn/info/extra`. `text-accent` bez `-ink` tylko na ciemnym tle w `drog:`; nigdy `white/N` (użyj `foreground/N`).
+  Różnice układu tylko wariantem `drog:`. Nowy ekran sprawdzaj w obu motywach (`/settings`).
 - Format daty: `pl-PL`. Waluta/kwoty nie występują.
 
 ## Deploy / środowisko

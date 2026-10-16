@@ -108,14 +108,14 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
               className={`flex-1 max-w-[100px] h-12 rounded-xl flex items-center justify-center font-mono text-sm font-bold transition-all ${
                 dart
                   ? dart.multiplier === 3
-                    ? "bg-neon-purple/15 text-neon-purple border border-neon-purple/30"
+                    ? "bg-extra/15 text-extra-ink border border-extra-ink/30"
                     : dart.multiplier === 2
-                    ? "bg-neon-red/15 text-neon-red border border-neon-red/30"
+                    ? "bg-danger/15 text-danger-ink border border-danger-ink/30"
                     : dart.segment === 0
                     ? "bg-surface text-muted border border-border"
-                    : "bg-neon-green/10 text-neon-green border border-neon-green/20"
+                    : "bg-accent/10 text-accent-ink border border-accent-ink/20"
                   : isActive
-                  ? "bg-surface-light border-2 border-neon-green/40 text-muted"
+                  ? "bg-surface-light border-2 border-accent-ink/40 text-muted"
                   : "bg-surface border border-border text-muted/30"
               }`}
             >
@@ -131,7 +131,7 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
           <span className="text-xs text-muted">Suma:</span>
           <span
             className={`font-mono text-lg font-bold ${
-              preview.isBust ? "text-neon-red" : "text-foreground"
+              preview.isBust ? "text-danger-ink" : "text-foreground"
             }`}
           >
             {preview.isBust ? "BUST" : turnTotal}
@@ -142,9 +142,9 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
           <span
             className={`font-mono text-lg font-bold ${
               preview.isCheckout
-                ? "text-neon-green text-glow-green"
+                ? "text-accent-ink text-glow-green"
                 : preview.isBust
-                ? "text-neon-red"
+                ? "text-danger-ink"
                 : "text-foreground"
             }`}
           >
@@ -157,7 +157,7 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
       {canAddMore && !preview.isBust && previewRemaining <= 170 && previewRemaining > 1 && getCheckout(previewRemaining) && (
         <div className="glass-light rounded-xl px-4 py-1.5 text-center">
           <span className="text-xs text-muted">Zamknięcie: </span>
-          <span className="font-mono text-sm text-neon-yellow font-medium">
+          <span className="font-mono text-sm text-warn-ink font-medium">
             {getCheckout(previewRemaining)}
           </span>
         </div>
@@ -168,17 +168,17 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
         <div className="flex gap-2">
           {(
             [
-              { m: 1 as Multiplier, label: "Single", color: "neon-green" },
-              { m: 2 as Multiplier, label: "Double", color: "neon-red" },
-              { m: 3 as Multiplier, label: "Triple", color: "neon-purple" },
+              { m: 1 as Multiplier, label: "Single", active: "bg-accent/15 text-accent-ink border border-accent-ink/30" },
+              { m: 2 as Multiplier, label: "Double", active: "bg-danger/15 text-danger-ink border border-danger-ink/30" },
+              { m: 3 as Multiplier, label: "Triple", active: "bg-extra/15 text-extra-ink border border-extra-ink/30" },
             ] as const
-          ).map(({ m, label, color }) => (
+          ).map(({ m, label, active }) => (
             <button
               key={m}
               onClick={() => setMultiplier(m)}
               className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                 multiplier === m
-                  ? `bg-${color}/15 text-${color} border border-${color}/30`
+                  ? active
                   : "bg-surface text-muted border border-transparent hover:bg-surface-light"
               }`}
             >
@@ -203,9 +203,9 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
               }}
               className={`h-11 rounded-xl font-mono text-sm font-bold transition-all ${
                 multiplier === 3
-                  ? "bg-neon-purple/10 text-neon-purple hover:bg-neon-purple/20 border border-neon-purple/20"
+                  ? "bg-extra/10 text-extra-ink hover:bg-extra/20 border border-extra-ink/20"
                   : multiplier === 2
-                  ? "bg-neon-red/10 text-neon-red hover:bg-neon-red/20 border border-neon-red/20"
+                  ? "bg-danger/10 text-danger-ink hover:bg-danger/20 border border-danger-ink/20"
                   : "bg-surface text-foreground hover:bg-surface-light border border-border"
               }`}
             >
@@ -226,7 +226,7 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
             }}
             className={`h-11 rounded-xl font-mono text-sm font-bold transition-all ${
               multiplier === 2
-                ? "bg-neon-red/10 text-neon-red hover:bg-neon-red/20 border border-neon-red/20"
+                ? "bg-danger/10 text-danger-ink hover:bg-danger/20 border border-danger-ink/20"
                 : "bg-surface text-foreground hover:bg-surface-light border border-border"
             }`}
           >
@@ -242,7 +242,7 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
                 navigator.vibrate(15);
               }
             }}
-            className="h-11 rounded-xl font-mono text-xs font-bold bg-neon-yellow/10 text-neon-yellow hover:bg-neon-yellow/20 border border-neon-yellow/20 transition-all"
+            className="h-11 rounded-xl font-mono text-xs font-bold bg-warn/10 text-warn-ink hover:bg-warn/20 border border-warn-ink/20 transition-all"
           >
             BULL
           </motion.button>
@@ -279,7 +279,7 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleNoScore}
-            className="flex-1 h-12 rounded-xl font-bold text-sm bg-surface-light text-neon-red hover:bg-neon-red/10 transition-all"
+            className="flex-1 h-12 rounded-xl font-bold text-sm bg-surface-light text-danger-ink hover:bg-danger/10 transition-all"
           >
             NO SCORE
           </motion.button>
@@ -288,7 +288,7 @@ export default function DartInput({ remaining, onConfirm }: DartInputProps) {
             whileTap={{ scale: 0.95 }}
             onClick={handleConfirm}
             disabled={preview.isCheckout} // auto-confirmed
-            className="flex-1 h-12 rounded-xl font-bold text-base bg-neon-green text-background glow-green hover:bg-neon-green-dim transition-all disabled:opacity-50"
+            className="flex-1 h-12 rounded-xl font-bold text-base bg-accent text-on-accent glow-green hover:bg-accent-dim transition-all disabled:opacity-50"
           >
             {preview.isBust ? "Potwierdź (Bust)" : "Potwierdź"}
           </motion.button>

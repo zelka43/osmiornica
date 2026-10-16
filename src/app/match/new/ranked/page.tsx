@@ -149,8 +149,8 @@ export default function RankedMatchPage() {
             >
               <ChevronLeft size={20} className="text-muted" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-neon-green/10 flex items-center justify-center">
-              <Target className="text-neon-green" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+              <Target className="text-accent-ink" size={20} />
             </div>
             <div>
               <h1 className="text-xl font-bold">Mecz rankingowy</h1>
@@ -170,13 +170,13 @@ export default function RankedMatchPage() {
                   onClick={() => setGameMode(mode)}
                   className={`relative rounded-2xl p-4 text-center transition-all duration-200 ${
                     gameMode === mode
-                      ? "glass glow-green border border-neon-green/30"
+                      ? "glass glow-green border border-accent-ink/30"
                       : "glass border border-transparent hover:border-border-bright"
                   }`}
                 >
                   <span
                     className={`font-mono text-3xl font-bold ${
-                      gameMode === mode ? "text-neon-green text-glow-green" : "text-foreground"
+                      gameMode === mode ? "text-accent-ink text-glow-green" : "text-foreground"
                     }`}
                   >
                     {mode}
@@ -204,7 +204,7 @@ export default function RankedMatchPage() {
                       onClick={() => handleOrderModeChange(mode)}
                       className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
                         orderMode === mode
-                          ? "bg-neon-blue/15 text-neon-blue"
+                          ? "bg-info/15 text-info-ink"
                           : "text-muted"
                       }`}
                     >
@@ -220,7 +220,7 @@ export default function RankedMatchPage() {
                 <p className="text-muted mb-2">Brak graczy</p>
                 <button
                   onClick={() => router.push("/players/manage")}
-                  className="text-neon-green text-sm hover:underline"
+                  className="text-accent-ink text-sm hover:underline"
                 >
                   Dodaj graczy →
                 </button>
@@ -238,7 +238,7 @@ export default function RankedMatchPage() {
                       whileTap={{ scale: 0.98 }}
                       className={`w-full flex items-center gap-3 rounded-2xl p-3 transition-all duration-200 ${
                         isSelected
-                          ? "glass glow-green border border-neon-green/20"
+                          ? "glass glow-green border border-accent-ink/20"
                           : "glass border border-transparent hover:border-border-bright"
                       }`}
                     >
@@ -255,9 +255,9 @@ export default function RankedMatchPage() {
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="w-7 h-7 rounded-full bg-neon-green flex items-center justify-center"
+                          className="w-7 h-7 rounded-full bg-accent flex items-center justify-center"
                         >
-                          <span className="text-background font-bold text-xs">
+                          <span className="text-on-accent font-bold text-xs">
                             {orderIndex + 1}
                           </span>
                         </motion.div>
@@ -288,7 +288,7 @@ export default function RankedMatchPage() {
                       key={id}
                       className="glass-light rounded-full px-3 py-1.5 text-sm flex items-center gap-1.5"
                     >
-                      <span className="text-neon-green font-mono text-xs">
+                      <span className="text-accent-ink font-mono text-xs">
                         {i + 1}.
                       </span>
                       {p.displayName}
@@ -306,7 +306,7 @@ export default function RankedMatchPage() {
             whileTap={selectedIds.length >= 2 ? { scale: 0.97 } : undefined}
             className={`w-full rounded-2xl p-4 flex items-center justify-center gap-2 font-bold text-lg transition-all duration-200 ${
               selectedIds.length >= 2
-                ? "bg-neon-green text-background glow-green hover:bg-neon-green-dim active:bg-neon-green-dim"
+                ? "bg-accent text-on-accent glow-green hover:bg-accent-dim active:bg-accent-dim"
                 : "bg-surface text-muted cursor-not-allowed"
             }`}
           >

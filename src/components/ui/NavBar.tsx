@@ -62,14 +62,14 @@ export default function NavBar() {
                 size={22}
                 className={
                   active
-                    ? "text-neon-green drop-shadow-[0_0_8px_#00ff88] transition-colors duration-200"
+                    ? "text-accent-ink transition-colors duration-200"
                     : "text-muted transition-colors duration-200"
                 }
               />
               <span
                 className={`text-[10px] leading-none ${
                   active
-                    ? "text-neon-green text-glow-green"
+                    ? "text-accent-ink text-glow-green"
                     : "text-muted"
                 } transition-colors duration-200`}
               >
@@ -79,7 +79,7 @@ export default function NavBar() {
               {active && (
                 <motion.span
                   layoutId="nav-indicator"
-                  className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-neon-green glow-green"
+                  className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-accent glow-green"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}

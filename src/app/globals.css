@@ -1,24 +1,123 @@
 @import "tailwindcss";
 
+/* Motywy: wartości w :root (Odświeżony, domyślny) i [data-theme="drogowskaz"].
+   Utility Tailwinda wskazują na zmienne, więc przełączenie atrybutu na <html>
+   zmienia wygląd całej aplikacji bez przeładowania.
+   Role kolorów: bazowa (np. accent) = wypełnienie; *-ink = tekst/obramowanie na tle;
+   on-* = tekst na wypełnieniu. W jasnym Drogowskazie ink ≠ wypełnienie (żółty tekst
+   na jasnym tle byłby nieczytelny). */
+
+@custom-variant drog (&:where([data-theme="drogowskaz"], [data-theme="drogowskaz"] *));
+
+:root {
+  --bg: #0b0d10;
+  --fg: #eceef0;
+  --card: #13171b;
+  --card-hover: #181c21;
+  --surface: #1a1e23;
+  --surface-light: #22272d;
+  --line: #1f2329;
+  --line-strong: #2a3037;
+  --muted: #8b929a;
+
+  --accent: #34e39a;
+  --accent-dim: #2bc985;
+  --accent-ink: #34e39a;
+  --on-accent: #06140d;
+  --danger: #ff5c77;
+  --danger-dim: #e64a65;
+  --danger-ink: #ff6b85;
+  --on-danger: #1a0509;
+  --warn: #ffc940;
+  --warn-ink: #ffc940;
+  --on-warn: #1a1300;
+  --info: #6fa8ff;
+  --info-ink: #6fa8ff;
+  --on-info: #04122a;
+  --extra: #b48cff;
+  --extra-ink: #b48cff;
+  --on-extra: #150a2b;
+
+  --app-sans: var(--font-geist), system-ui, sans-serif;
+  --app-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --shadow-raised: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --shadow-accent: 0 6px 16px color-mix(in oklab, var(--accent) 22%, transparent);
+  color-scheme: dark;
+}
+
+[data-theme="drogowskaz"] {
+  --bg: #f4f4f2;
+  --fg: #0b0b0b;
+  --card: #ffffff;
+  --card-hover: #f8f8f6;
+  --surface: #ffffff;
+  --surface-light: #ebebe8;
+  --line: #d4d4d0;
+  --line-strong: #b9b9b4;
+  --muted: #555555;
+
+  --accent: #ffcc00;
+  --accent-dim: #f0bf00;
+  --accent-ink: #0b0b0b;
+  --on-accent: #0b0b0b;
+  --danger: #c4161c;
+  --danger-dim: #a81217;
+  --danger-ink: #b3131a;
+  --on-danger: #ffffff;
+  --warn: #ffcc00;
+  --warn-ink: #7a5600;
+  --on-warn: #0b0b0b;
+  --info: #1f5fd1;
+  --info-ink: #1a52b8;
+  --on-info: #ffffff;
+  --extra: #6b3fc4;
+  --extra-ink: #5e35b1;
+  --on-extra: #ffffff;
+
+  --app-sans: var(--font-asap), system-ui, sans-serif;
+  --app-mono: var(--font-asap), system-ui, sans-serif;
+  --shadow-raised: none;
+  --shadow-accent: none;
+  /* Oznakowanie: proste krawędzie */
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 6px;
+  color-scheme: light;
+}
+
 @theme inline {
-  --color-background: #0a0a0f;
-  --color-foreground: #e8e8ed;
-  --color-card: #12121a;
-  --color-card-hover: #1a1a25;
-  --color-border: #1e1e2e;
-  --color-border-bright: #2a2a3e;
-  --color-neon-green: #00ff88;
-  --color-neon-green-dim: #00cc6a;
-  --color-neon-red: #ff3366;
-  --color-neon-red-dim: #cc2952;
-  --color-neon-blue: #3388ff;
-  --color-neon-yellow: #ffcc00;
-  --color-neon-purple: #aa55ff;
-  --color-muted: #6b6b80;
-  --color-surface: #16161f;
-  --color-surface-light: #1c1c28;
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains);
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-border: var(--line);
+  --color-border-bright: var(--line-strong);
+  --color-surface: var(--surface);
+  --color-surface-light: var(--surface-light);
+  --color-muted: var(--muted);
+
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-danger-dim: var(--danger-dim);
+  --color-danger-ink: var(--danger-ink);
+  --color-on-danger: var(--on-danger);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-on-warn: var(--on-warn);
+  --color-info: var(--info);
+  --color-info-ink: var(--info-ink);
+  --color-on-info: var(--on-info);
+  --color-extra: var(--extra);
+  --color-extra-ink: var(--extra-ink);
+  --color-on-extra: var(--on-extra);
+
+  --font-sans: var(--app-sans);
+  --font-mono: var(--app-mono);
 }
 
 * {
@@ -26,10 +125,34 @@
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--app-sans);
   overscroll-behavior: none;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+  color: var(--fg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+
+input,
+textarea {
+  caret-color: var(--accent-ink);
+}
+
+/* Cyfry wyników zawsze o równej szerokości (tabele, licznik) */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme="drogowskaz"] .font-mono {
+  font-weight: 700;
 }
 
 /* Scrollbar styling */
@@ -40,53 +163,38 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-bright);
+  background: var(--line-strong);
   border-radius: 4px;
 }
 
-/* Glass card effect */
+/* Karta: pełna powierzchnia + cienka linia (bez rozmycia) */
 .glass {
-  background: rgba(18, 18, 26, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--card);
+  border: 1px solid var(--line);
 }
 
 .glass-light {
-  background: rgba(28, 28, 40, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-light);
+  border: 1px solid var(--line);
 }
 
-/* Glow effects */
+/* Główne akcje: delikatny cień z przesunięciem zamiast poświaty */
 .glow-green {
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.15), 0 0 40px rgba(0, 255, 136, 0.05);
+  box-shadow: var(--shadow-accent);
 }
 
-.glow-red {
-  box-shadow: 0 0 20px rgba(255, 51, 102, 0.15), 0 0 40px rgba(255, 51, 102, 0.05);
-}
-
+.glow-red,
 .glow-blue {
-  box-shadow: 0 0 20px rgba(51, 136, 255, 0.15), 0 0 40px rgba(51, 136, 255, 0.05);
+  box-shadow: var(--shadow-raised);
 }
 
-/* Neon text glow */
-.text-glow-green {
-  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 255, 136, 0.2);
-}
-
+.text-glow-green,
 .text-glow-red {
-  text-shadow: 0 0 10px rgba(255, 51, 102, 0.5), 0 0 20px rgba(255, 51, 102, 0.2);
+  text-shadow: none;
 }
 
-/* Gradient mesh background */
 .mesh-bg {
-  background-image:
-    radial-gradient(at 20% 80%, rgba(0, 255, 136, 0.04) 0, transparent 50%),
-    radial-gradient(at 80% 20%, rgba(51, 136, 255, 0.04) 0, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(170, 85, 255, 0.02) 0, transparent 50%);
+  background-image: none;
 }
 
 /* Shimmer loading effect */
@@ -96,31 +204,27 @@ body {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--color-card) 25%, var(--color-card-hover) 50%, var(--color-card) 75%);
+  background: linear-gradient(90deg, var(--card) 25%, var(--card-hover) 50%, var(--card) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
 }
 
-/* Pulse animation for active player — strong, unmissable */
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 25px rgba(0, 255, 136, 0.35), 0 0 50px rgba(0, 255, 136, 0.15), inset 0 0 15px rgba(0, 255, 136, 0.05);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(0, 255, 136, 0.55), 0 0 80px rgba(0, 255, 136, 0.25), inset 0 0 25px rgba(0, 255, 136, 0.08);
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
   }
 }
 
+/* Aktywny gracz: wyraźna ramka akcentu + uniesienie (bez pulsowania) */
 .pulse-active {
-  animation: pulse-glow 1.5s ease-in-out infinite;
+  box-shadow: var(--shadow-raised);
 }
 
-/* Dimmed inactive player */
+/* Pozostali gracze przygaszeni */
 .player-inactive {
-  opacity: 0.45;
-  filter: brightness(0.7);
-  transition: opacity 0.3s, filter 0.3s;
+  opacity: 0.6;
+  transition: opacity 0.3s;
 }
 
 /* Safe area for mobile */

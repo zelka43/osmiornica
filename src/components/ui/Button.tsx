@@ -18,11 +18,11 @@ interface ButtonProps {
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    "bg-neon-green/15 text-neon-green border border-neon-green/30 glow-green hover:bg-neon-green/25 active:bg-neon-green/30",
+    "bg-accent/15 text-accent-ink border border-accent-ink/30 glow-green hover:bg-accent/25 active:bg-accent/30",
   secondary:
     "bg-surface text-foreground border border-border hover:bg-surface-light active:bg-card-hover",
   danger:
-    "bg-neon-red/15 text-neon-red border border-neon-red/30 glow-red hover:bg-neon-red/25 active:bg-neon-red/30",
+    "bg-danger/15 text-danger-ink border border-danger-ink/30 glow-red hover:bg-danger/25 active:bg-danger/30",
   ghost:
     "bg-transparent text-foreground hover:bg-surface-light active:bg-surface border border-transparent",
 };

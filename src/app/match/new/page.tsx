@@ -27,8 +27,8 @@ export default function NewGamePage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           {/* Header */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-neon-green/10 flex items-center justify-center">
-              <Target className="text-neon-green" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+              <Target className="text-accent-ink" size={20} />
             </div>
             <div>
               <h1 className="text-xl font-bold">Nowa gra</h1>
@@ -43,8 +43,8 @@ export default function NewGamePage() {
             onClick={() => router.push("/match/new/ranked")}
             className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-4 flex items-center gap-4 mb-8 transition-all duration-200"
           >
-            <div className="w-11 h-11 rounded-xl bg-neon-green/10 flex items-center justify-center shrink-0">
-              <Trophy className="text-neon-green" size={22} />
+            <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+              <Trophy className="text-accent-ink" size={22} />
             </div>
             <div className="flex-1 text-left">
               <p className="font-bold text-base">Mecz rankingowy</p>
@@ -60,8 +60,8 @@ export default function NewGamePage() {
             onClick={() => router.push("/duel")}
             className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-4 flex items-center gap-4 mb-8 transition-all duration-200"
           >
-            <div className="w-11 h-11 rounded-xl bg-neon-red/10 flex items-center justify-center shrink-0">
-              <Swords className="text-neon-red" size={22} />
+            <div className="w-11 h-11 rounded-xl bg-danger/10 flex items-center justify-center shrink-0">
+              <Swords className="text-danger-ink" size={22} />
             </div>
             <div className="flex-1 text-left">
               <p className="font-bold text-base">Pojedynek 1v1</p>
@@ -77,8 +77,8 @@ export default function NewGamePage() {
             onClick={() => router.push("/tournament")}
             className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-4 flex items-center gap-4 mb-8 transition-all duration-200"
           >
-            <div className="w-11 h-11 rounded-xl bg-neon-yellow/10 flex items-center justify-center shrink-0">
-              <Trophy className="text-neon-yellow" size={22} />
+            <div className="w-11 h-11 rounded-xl bg-warn/10 flex items-center justify-center shrink-0">
+              <Trophy className="text-warn-ink" size={22} />
             </div>
             <div className="flex-1 text-left">
               <p className="font-bold text-base">Turniej pucharowy</p>
@@ -94,8 +94,8 @@ export default function NewGamePage() {
             onClick={() => setTrainingOpen((o) => !o)}
             className="w-full glass border border-transparent hover:border-border-bright rounded-2xl p-4 flex items-center gap-4 transition-all duration-200"
           >
-            <div className="w-11 h-11 rounded-xl bg-neon-blue/10 flex items-center justify-center shrink-0">
-              <Dumbbell className="text-neon-blue" size={22} />
+            <div className="w-11 h-11 rounded-xl bg-info/10 flex items-center justify-center shrink-0">
+              <Dumbbell className="text-info-ink" size={22} />
             </div>
             <div className="flex-1 text-left">
               <p className="font-bold text-base">Tryb treningowy</p>
@@ -120,43 +120,43 @@ export default function NewGamePage() {
               >
                 <div className="pt-2 space-y-2">
                   <TrainingCard
-                    icon={<Users size={20} className="text-neon-purple" />}
-                    iconBg="bg-neon-purple/10"
+                    icon={<Users size={20} className="text-extra-ink" />}
+                    iconBg="bg-extra/10"
                     label="Gra towarzyska"
                     desc="501 / 301 · można dodać gości"
                     onClick={() => router.push("/match/new/friendly")}
                   />
                   <TrainingCard
-                    icon={<Shuffle size={20} className="text-neon-yellow" />}
-                    iconBg="bg-neon-yellow/10"
+                    icon={<Shuffle size={20} className="text-warn-ink" />}
+                    iconBg="bg-warn/10"
                     label="Losowy checkout"
                     desc="Trening finiszowania"
                     onClick={() => router.push("/training/checkout")}
                   />
                   <TrainingCard
-                    icon={<Target size={20} className="text-neon-purple" />}
-                    iconBg="bg-neon-purple/10"
+                    icon={<Target size={20} className="text-extra-ink" />}
+                    iconBg="bg-extra/10"
                     label="Trening singli"
                     desc="1–20 + Bull"
                     onClick={() => router.push("/training/singles")}
                   />
                   <TrainingCard
-                    icon={<CircleDot size={20} className="text-neon-green" />}
-                    iconBg="bg-neon-green/10"
+                    icon={<CircleDot size={20} className="text-accent-ink" />}
+                    iconBg="bg-accent/10"
                     label="Trening doubli"
                     desc="D1–D20 + Bull"
                     onClick={() => router.push("/training/doubles")}
                   />
                   <TrainingCard
-                    icon={<CircleDot size={20} className="text-neon-blue" />}
-                    iconBg="bg-neon-blue/10"
+                    icon={<CircleDot size={20} className="text-info-ink" />}
+                    iconBg="bg-info/10"
                     label="Trening trójek"
                     desc="T1–T20"
                     onClick={() => router.push("/training/triples")}
                   />
                   <TrainingCard
-                    icon={<BarChart2 size={20} className="text-neon-red" />}
-                    iconBg="bg-neon-red/10"
+                    icon={<BarChart2 size={20} className="text-danger-ink" />}
+                    iconBg="bg-danger/10"
                     label="Trening punktowy"
                     desc="10 lub 20 rund"
                     onClick={() => router.push("/training/points")}

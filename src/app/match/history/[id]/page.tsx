@@ -86,7 +86,7 @@ export default function MatchDetailPage({
             <p className="text-muted">Mecz nie został znaleziony.</p>
             <button
               onClick={() => router.push("/match/history")}
-              className="mt-4 text-neon-blue text-sm"
+              className="mt-4 text-info-ink text-sm"
             >
               Wróć do historii
             </button>
@@ -121,7 +121,7 @@ export default function MatchDetailPage({
               <div className="flex items-center gap-2 text-xs text-muted">
                 <Calendar size={12} />
                 <span>{formatDate(dateTs)}, {formatTime(dateTs)}</span>
-                <span className="text-neon-blue font-bold">{match.gameMode}</span>
+                <span className="text-info-ink font-bold">{match.gameMode}</span>
               </div>
             </div>
           </motion.div>
@@ -130,11 +130,11 @@ export default function MatchDetailPage({
           {match.winnerName && (
             <motion.div
               variants={item}
-              className="glass rounded-2xl p-4 flex items-center gap-3 border border-neon-green/20 bg-neon-green/[0.04]"
+              className="glass rounded-2xl p-4 flex items-center gap-3 border border-accent-ink/20 bg-accent/[0.04]"
             >
-              <Trophy size={24} className="text-neon-yellow" />
+              <Trophy size={24} className="text-warn-ink" />
               <div>
-                <span className="text-neon-green font-bold">{match.winnerName}</span>
+                <span className="text-accent-ink font-bold">{match.winnerName}</span>
                 <span className="text-muted text-sm"> wygrał mecz</span>
               </div>
             </motion.div>
@@ -153,7 +153,7 @@ export default function MatchDetailPage({
               </h3>
               <div className="glass rounded-2xl overflow-hidden">
                 {/* Header */}
-                <div className="grid grid-cols-[2rem_1fr_5rem_4rem_4rem] gap-1 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted border-b border-white/5">
+                <div className="grid grid-cols-[2rem_1fr_5rem_4rem_4rem] gap-1 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted border-b border-foreground/5">
                   <span className="text-center">#</span>
                   <span>Gracz</span>
                   <span className="text-center">Rzuty</span>
@@ -171,13 +171,13 @@ export default function MatchDetailPage({
                       key={turn.id}
                       className={`grid grid-cols-[2rem_1fr_5rem_4rem_4rem] gap-1 items-center px-3 py-2 text-sm ${
                         turn.isCheckout
-                          ? "bg-neon-green/[0.06]"
+                          ? "bg-accent/[0.06]"
                           : turn.isBust
-                          ? "bg-neon-red/[0.04]"
+                          ? "bg-danger/[0.04]"
                           : idx % 2 === 0
                           ? ""
-                          : "bg-white/[0.01]"
-                      } ${idx < match.turns.length - 1 ? "border-b border-white/5" : ""}`}
+                          : "bg-foreground/[0.01]"
+                      } ${idx < match.turns.length - 1 ? "border-b border-foreground/5" : ""}`}
                     >
                       <span className="text-center text-[11px] text-muted font-mono">{turn.turnNumber}</span>
                       <span className="text-xs font-medium truncate">{playerName}</span>
@@ -187,9 +187,9 @@ export default function MatchDetailPage({
                             key={di}
                             className={`text-[10px] font-mono font-bold px-1 py-0.5 rounded ${
                               d.multiplier === 3
-                                ? "text-neon-purple bg-neon-purple/10"
+                                ? "text-extra-ink bg-extra/10"
                                 : d.multiplier === 2
-                                ? "text-neon-red bg-neon-red/10"
+                                ? "text-danger-ink bg-danger/10"
                                 : d.segment === 0
                                 ? "text-muted"
                                 : "text-foreground"
@@ -202,9 +202,9 @@ export default function MatchDetailPage({
                       <span
                         className={`text-center font-mono text-xs font-bold ${
                           turn.isBust
-                            ? "text-neon-red"
+                            ? "text-danger-ink"
                             : turn.isCheckout
-                            ? "text-neon-green"
+                            ? "text-accent-ink"
                             : "text-foreground"
                         }`}
                       >
@@ -212,7 +212,7 @@ export default function MatchDetailPage({
                       </span>
                       <span
                         className={`text-center font-mono text-xs ${
-                          turn.isCheckout ? "text-neon-green font-bold" : "text-muted"
+                          turn.isCheckout ? "text-accent-ink font-bold" : "text-muted"
                         }`}
                       >
                         {turn.remainingAfter}

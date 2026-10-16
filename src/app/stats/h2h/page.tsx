@@ -166,8 +166,8 @@ export default function H2HPage() {
           {/* Title */}
           <motion.div variants={item} className="text-center pt-4 pb-2">
             <div className="flex items-center justify-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-xl bg-neon-red/10 flex items-center justify-center">
-                <Swords size={22} className="text-neon-red" />
+              <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center">
+                <Swords size={22} className="text-danger-ink" />
               </div>
               <h1 className="text-2xl font-bold text-foreground tracking-tight">
                 Head-to-Head
@@ -189,7 +189,7 @@ export default function H2HPage() {
                 <select
                   value={player1Id}
                   onChange={(e) => setPlayer1Id(e.target.value)}
-                  className="w-full appearance-none glass rounded-2xl px-4 py-3.5 pr-10 text-sm font-medium text-foreground bg-transparent border border-white/10 focus:border-neon-green/40 focus:outline-none transition-colors cursor-pointer"
+                  className="w-full appearance-none glass rounded-2xl px-4 py-3.5 pr-10 text-sm font-medium text-foreground bg-transparent border border-foreground/10 focus:border-accent-ink/40 focus:outline-none transition-colors cursor-pointer"
                 >
                   <option value="" className="bg-card text-muted">
                     Wybierz gracza...
@@ -211,7 +211,7 @@ export default function H2HPage() {
 
             {/* VS Divider */}
             <div className="flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full bg-surface-light flex items-center justify-center border border-white/10">
+              <div className="w-10 h-10 rounded-full bg-surface-light flex items-center justify-center border border-foreground/10">
                 <span className="text-xs font-bold text-muted">VS</span>
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function H2HPage() {
                 <select
                   value={player2Id}
                   onChange={(e) => setPlayer2Id(e.target.value)}
-                  className="w-full appearance-none glass rounded-2xl px-4 py-3.5 pr-10 text-sm font-medium text-foreground bg-transparent border border-white/10 focus:border-neon-red/40 focus:outline-none transition-colors cursor-pointer"
+                  className="w-full appearance-none glass rounded-2xl px-4 py-3.5 pr-10 text-sm font-medium text-foreground bg-transparent border border-foreground/10 focus:border-danger-ink/40 focus:outline-none transition-colors cursor-pointer"
                 >
                   <option value="" className="bg-card text-muted">
                     Wybierz gracza...
@@ -256,7 +256,7 @@ export default function H2HPage() {
                     onClick={() => { setPeriod(p); setOffset(0); }}
                     className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
                       period === p
-                        ? "bg-neon-green/15 text-neon-green border border-neon-green/30"
+                        ? "bg-accent/15 text-accent-ink border border-accent-ink/30"
                         : "text-muted hover:text-foreground"
                     }`}
                   >
@@ -318,14 +318,14 @@ export default function H2HPage() {
                         <span className="text-sm font-semibold text-foreground text-center truncate max-w-[100px]">
                           {p1?.displayName}
                         </span>
-                        <span className="text-3xl font-bold font-mono text-neon-green">
+                        <span className="text-3xl font-bold font-mono text-accent-ink">
                           {p1Stats.wins}
                         </span>
                       </div>
 
                       {/* VS */}
                       <div className="flex flex-col items-center gap-1 px-3">
-                        <div className="w-12 h-12 rounded-full bg-surface-light border border-white/10 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-surface-light border border-foreground/10 flex items-center justify-center">
                           <Swords size={20} className="text-muted" />
                         </div>
                         <span className="text-xs font-bold text-muted uppercase">
@@ -344,7 +344,7 @@ export default function H2HPage() {
                         <span className="text-sm font-semibold text-foreground text-center truncate max-w-[100px]">
                           {p2?.displayName}
                         </span>
-                        <span className="text-3xl font-bold font-mono text-neon-red">
+                        <span className="text-3xl font-bold font-mono text-danger-ink">
                           {p2Stats.wins}
                         </span>
                       </div>
@@ -354,7 +354,7 @@ export default function H2HPage() {
                     <div className="space-y-2">
                       <div className="h-3 rounded-full bg-surface-light overflow-hidden flex">
                         <motion.div
-                          className="h-full bg-gradient-to-r from-neon-green to-emerald-400 rounded-l-full"
+                          className="h-full bg-accent rounded-l-full"
                           initial={{ width: 0 }}
                           animate={{
                             width: `${(p1Stats.wins / totalBar) * 100}%`,
@@ -362,7 +362,7 @@ export default function H2HPage() {
                           transition={{ duration: 0.8, ease: "easeOut" as const, delay: 0.3 }}
                         />
                         <motion.div
-                          className="h-full bg-gradient-to-r from-rose-400 to-neon-red rounded-r-full"
+                          className="h-full bg-danger rounded-r-full"
                           initial={{ width: 0 }}
                           animate={{
                             width: `${(p2Stats.wins / totalBar) * 100}%`,
@@ -379,12 +379,12 @@ export default function H2HPage() {
 
                   {/* Detailed Stats Comparison */}
                   <div className="glass rounded-2xl overflow-hidden">
-                    <div className="px-4 py-3 border-b border-white/5">
+                    <div className="px-4 py-3 border-b border-foreground/5">
                       <p className="text-xs font-semibold text-muted uppercase tracking-wider text-center">
                         Statystyki ze wspólnych meczów ({totalMatches})
                       </p>
                     </div>
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-foreground/5">
                       <StatRow
                         label="Średnia 3 rzuty"
                         v1={calculateThreeDartAvg(p1Stats.pointsScored, p1Stats.dartsThrown).toFixed(1)}
@@ -484,7 +484,7 @@ function StatRow({
     <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 py-3">
       <span
         className={`font-mono text-sm text-right pr-3 ${
-          better === 1 ? "text-neon-green font-bold" : "text-foreground"
+          better === 1 ? "text-accent-ink font-bold" : "text-foreground"
         }`}
       >
         {v1}
@@ -494,7 +494,7 @@ function StatRow({
       </span>
       <span
         className={`font-mono text-sm pl-3 ${
-          better === 2 ? "text-neon-red font-bold" : "text-foreground"
+          better === 2 ? "text-danger-ink font-bold" : "text-foreground"
         }`}
       >
         {v2}

@@ -154,8 +154,8 @@ export default function DevPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="glass rounded-3xl p-8 w-full max-w-sm text-center space-y-6"
         >
-          <div className="w-16 h-16 rounded-2xl bg-neon-red/10 flex items-center justify-center mx-auto">
-            <Shield size={32} className="text-neon-red" />
+          <div className="w-16 h-16 rounded-2xl bg-danger/10 flex items-center justify-center mx-auto">
+            <Shield size={32} className="text-danger-ink" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground mb-1">Tryb developera</h1>
@@ -172,15 +172,15 @@ export default function DevPage() {
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               placeholder="Hasło"
               className={`w-full bg-surface rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted/50 border ${
-                passwordError ? "border-neon-red/50" : "border-white/5"
-              } focus:outline-none focus:border-neon-blue/30`}
+                passwordError ? "border-danger-ink/50" : "border-foreground/5"
+              } focus:outline-none focus:border-info-ink/30`}
             />
             {passwordError && (
-              <p className="text-neon-red text-xs">Nieprawidłowe hasło</p>
+              <p className="text-danger-ink text-xs">Nieprawidłowe hasło</p>
             )}
             <button
               onClick={handleLogin}
-              className="w-full rounded-xl py-3 bg-neon-red/15 text-neon-red font-bold text-sm hover:bg-neon-red/25 transition-all"
+              className="w-full rounded-xl py-3 bg-danger/15 text-danger-ink font-bold text-sm hover:bg-danger/25 transition-all"
             >
               Zaloguj
             </button>
@@ -214,7 +214,7 @@ export default function DevPage() {
               <ArrowLeft size={18} className="text-muted" />
             </button>
             <div className="flex items-center gap-2">
-              <Shield size={20} className="text-neon-red" />
+              <Shield size={20} className="text-danger-ink" />
               <h1 className="text-lg font-bold text-foreground">Tryb developera</h1>
             </div>
           </motion.div>
@@ -227,8 +227,8 @@ export default function DevPage() {
               exit={{ opacity: 0 }}
               className={`rounded-xl px-4 py-3 text-sm font-medium ${
                 message.type === "success"
-                  ? "bg-neon-green/10 text-neon-green border border-neon-green/20"
-                  : "bg-neon-red/10 text-neon-red border border-neon-red/20"
+                  ? "bg-accent/10 text-accent-ink border border-accent-ink/20"
+                  : "bg-danger/10 text-danger-ink border border-danger-ink/20"
               }`}
             >
               {message.text}
@@ -238,7 +238,7 @@ export default function DevPage() {
           {/* Delete stats from date */}
           <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Calendar size={18} className="text-neon-yellow" />
+              <Calendar size={18} className="text-warn-ink" />
               <h2 className="text-sm font-bold text-foreground">Usuń mecze od daty</h2>
             </div>
             <p className="text-xs text-muted">
@@ -248,13 +248,13 @@ export default function DevPage() {
               type="date"
               value={deleteDate}
               onChange={(e) => setDeleteDate(e.target.value)}
-              className="w-full bg-surface rounded-xl px-4 py-3 text-sm text-foreground border border-white/5 focus:outline-none focus:border-neon-blue/30"
+              className="w-full bg-surface rounded-xl px-4 py-3 text-sm text-foreground border border-foreground/5 focus:outline-none focus:border-info-ink/30"
             />
             {confirmAction === "deleteSince" ? (
               <div className="flex gap-2">
                 <button
                   onClick={handleDeleteSince}
-                  className="flex-1 rounded-xl py-2.5 bg-neon-red/15 text-neon-red font-bold text-xs hover:bg-neon-red/25 transition-all"
+                  className="flex-1 rounded-xl py-2.5 bg-danger/15 text-danger-ink font-bold text-xs hover:bg-danger/25 transition-all"
                 >
                   Potwierdź usunięcie
                 </button>
@@ -269,7 +269,7 @@ export default function DevPage() {
               <button
                 onClick={() => deleteDate && setConfirmAction("deleteSince")}
                 disabled={!deleteDate}
-                className="w-full rounded-xl py-2.5 bg-neon-yellow/10 text-neon-yellow font-bold text-xs hover:bg-neon-yellow/20 transition-all disabled:opacity-30"
+                className="w-full rounded-xl py-2.5 bg-warn/10 text-warn-ink font-bold text-xs hover:bg-warn/20 transition-all disabled:opacity-30"
               >
                 Usuń mecze
               </button>
@@ -279,7 +279,7 @@ export default function DevPage() {
           {/* Recalculate stats */}
           <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <AlertTriangle size={18} className="text-neon-blue" />
+              <AlertTriangle size={18} className="text-info-ink" />
               <h2 className="text-sm font-bold text-foreground">Przelicz statystyki</h2>
             </div>
             <p className="text-xs text-muted">
@@ -289,7 +289,7 @@ export default function DevPage() {
               <div className="flex gap-2">
                 <button
                   onClick={handleRecalculate}
-                  className="flex-1 rounded-xl py-2.5 bg-neon-blue/15 text-neon-blue font-bold text-xs hover:bg-neon-blue/25 transition-all"
+                  className="flex-1 rounded-xl py-2.5 bg-info/15 text-info-ink font-bold text-xs hover:bg-info/25 transition-all"
                 >
                   Potwierdź
                 </button>
@@ -303,7 +303,7 @@ export default function DevPage() {
             ) : (
               <button
                 onClick={() => setConfirmAction("recalculate")}
-                className="w-full rounded-xl py-2.5 bg-neon-blue/10 text-neon-blue font-bold text-xs hover:bg-neon-blue/20 transition-all"
+                className="w-full rounded-xl py-2.5 bg-info/10 text-info-ink font-bold text-xs hover:bg-info/20 transition-all"
               >
                 Przelicz
               </button>
@@ -313,20 +313,20 @@ export default function DevPage() {
           {/* Export / Import */}
           <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Download size={18} className="text-neon-purple" />
+              <Download size={18} className="text-extra-ink" />
               <h2 className="text-sm font-bold text-foreground">Backup danych</h2>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleExport}
-                className="flex-1 rounded-xl py-2.5 bg-neon-purple/10 text-neon-purple font-bold text-xs hover:bg-neon-purple/20 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 rounded-xl py-2.5 bg-extra/10 text-extra-ink font-bold text-xs hover:bg-extra/20 transition-all flex items-center justify-center gap-1.5"
               >
                 <Download size={14} />
                 Eksport
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-1 rounded-xl py-2.5 bg-neon-green/10 text-neon-green font-bold text-xs hover:bg-neon-green/20 transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 rounded-xl py-2.5 bg-accent/10 text-accent-ink font-bold text-xs hover:bg-accent/20 transition-all flex items-center justify-center gap-1.5"
               >
                 <Upload size={14} />
                 Import
@@ -344,7 +344,7 @@ export default function DevPage() {
           {/* Ranking mode */}
           <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Trophy size={18} className="text-neon-yellow" />
+              <Trophy size={18} className="text-warn-ink" />
               <h2 className="text-sm font-bold text-foreground">Tryb rankingu (tabela)</h2>
             </div>
             <p className="text-xs text-muted">
@@ -355,7 +355,7 @@ export default function DevPage() {
                 onClick={() => handleRankingModeChange("winpct")}
                 className={`flex-1 rounded-lg py-2 text-[10px] font-bold transition-all ${
                   rankingMode === "winpct"
-                    ? "bg-neon-green/15 text-neon-green"
+                    ? "bg-accent/15 text-accent-ink"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -365,7 +365,7 @@ export default function DevPage() {
                 onClick={() => handleRankingModeChange("points")}
                 className={`flex-1 rounded-lg py-2 text-[10px] font-bold transition-all ${
                   rankingMode === "points"
-                    ? "bg-neon-yellow/15 text-neon-yellow"
+                    ? "bg-warn/15 text-warn-ink"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -375,7 +375,7 @@ export default function DevPage() {
                 onClick={() => handleRankingModeChange("rating")}
                 className={`flex-1 rounded-lg py-2 text-[10px] font-bold transition-all ${
                   rankingMode === "rating"
-                    ? "bg-neon-blue/15 text-neon-blue"
+                    ? "bg-info/15 text-info-ink"
                     : "text-muted hover:text-foreground"
                 }`}
               >
@@ -392,7 +392,7 @@ export default function DevPage() {
           {/* Recalculate doubles */}
           <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Target size={18} className="text-neon-purple" />
+              <Target size={18} className="text-extra-ink" />
               <h2 className="text-sm font-bold text-foreground">Przelicz double z historii</h2>
             </div>
             <p className="text-xs text-muted">
@@ -402,7 +402,7 @@ export default function DevPage() {
               <div className="flex gap-2">
                 <button
                   onClick={handleRecalculateDoubles}
-                  className="flex-1 rounded-xl py-2.5 bg-neon-purple/15 text-neon-purple font-bold text-xs hover:bg-neon-purple/25 transition-all"
+                  className="flex-1 rounded-xl py-2.5 bg-extra/15 text-extra-ink font-bold text-xs hover:bg-extra/25 transition-all"
                 >
                   Potwierdź
                 </button>
@@ -416,7 +416,7 @@ export default function DevPage() {
             ) : (
               <button
                 onClick={() => setConfirmAction("recalcDoubles")}
-                className="w-full rounded-xl py-2.5 bg-neon-purple/10 text-neon-purple font-bold text-xs hover:bg-neon-purple/20 transition-all"
+                className="w-full rounded-xl py-2.5 bg-extra/10 text-extra-ink font-bold text-xs hover:bg-extra/20 transition-all"
               >
                 Przelicz double
               </button>
@@ -426,7 +426,7 @@ export default function DevPage() {
           {/* Delete individual match */}
           <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Trash2 size={18} className="text-neon-red" />
+              <Trash2 size={18} className="text-danger-ink" />
               <h2 className="text-sm font-bold text-foreground">Usuń pojedynczy mecz</h2>
             </div>
             <p className="text-xs text-muted">
@@ -446,13 +446,13 @@ export default function DevPage() {
                     <div className="min-w-0">
                       <p className="text-[11px] text-muted font-mono">{dateStr}, {timeStr}</p>
                       <p className="text-xs text-foreground truncate">{m.playerNames.join(" vs ")}</p>
-                      {winner && <p className="text-[10px] text-neon-green">🏆 {winner}</p>}
+                      {winner && <p className="text-[10px] text-accent-ink">🏆 {winner}</p>}
                     </div>
                     {confirmDeleteMatchId === m.id ? (
                       <div className="flex gap-1 shrink-0">
                         <button
                           onClick={() => handleDeleteMatch(m.id)}
-                          className="rounded-lg px-2 py-1 bg-neon-red/15 text-neon-red font-bold text-[10px] hover:bg-neon-red/25 transition-all"
+                          className="rounded-lg px-2 py-1 bg-danger/15 text-danger-ink font-bold text-[10px] hover:bg-danger/25 transition-all"
                         >
                           Usuń
                         </button>
@@ -466,9 +466,9 @@ export default function DevPage() {
                     ) : (
                       <button
                         onClick={() => setConfirmDeleteMatchId(m.id)}
-                        className="shrink-0 p-1.5 rounded-lg hover:bg-neon-red/10 transition-all"
+                        className="shrink-0 p-1.5 rounded-lg hover:bg-danger/10 transition-all"
                       >
-                        <Trash2 size={13} className="text-muted hover:text-neon-red" />
+                        <Trash2 size={13} className="text-muted hover:text-danger-ink" />
                       </button>
                     )}
                   </div>
@@ -478,10 +478,10 @@ export default function DevPage() {
           </motion.div>
 
           {/* Clear all data */}
-          <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3 border border-neon-red/10">
+          <motion.div variants={item} className="glass rounded-2xl p-4 space-y-3 border border-danger-ink/10">
             <div className="flex items-center gap-2">
-              <Trash2 size={18} className="text-neon-red" />
-              <h2 className="text-sm font-bold text-neon-red">Wyczyść wszystkie dane</h2>
+              <Trash2 size={18} className="text-danger-ink" />
+              <h2 className="text-sm font-bold text-danger-ink">Wyczyść wszystkie dane</h2>
             </div>
             <p className="text-xs text-muted">
               Usuwa wszystkich graczy, mecze, rekordy H2H i aktywny mecz. Tej operacji nie można cofnąć!
@@ -490,7 +490,7 @@ export default function DevPage() {
               <div className="flex gap-2">
                 <button
                   onClick={handleClearAll}
-                  className="flex-1 rounded-xl py-2.5 bg-neon-red text-background font-bold text-xs hover:bg-neon-red/80 transition-all"
+                  className="flex-1 rounded-xl py-2.5 bg-danger text-on-danger font-bold text-xs hover:bg-danger/80 transition-all"
                 >
                   Tak, wyczyść wszystko
                 </button>
@@ -504,7 +504,7 @@ export default function DevPage() {
             ) : (
               <button
                 onClick={() => setConfirmAction("clearAll")}
-                className="w-full rounded-xl py-2.5 bg-neon-red/10 text-neon-red font-bold text-xs hover:bg-neon-red/20 transition-all"
+                className="w-full rounded-xl py-2.5 bg-danger/10 text-danger-ink font-bold text-xs hover:bg-danger/20 transition-all"
               >
                 Wyczyść dane
               </button>

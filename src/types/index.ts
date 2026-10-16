@@ -130,16 +130,16 @@ export interface H2HRecord {
   lastPlayed: number;
 }
 
-// Avatar colors for players
+// Avatar colors for players (pełne wypełnienia, biały inicjał ≥3:1)
 export const PLAYER_COLORS = [
-  "from-emerald-500 to-teal-600",
-  "from-blue-500 to-indigo-600",
-  "from-purple-500 to-violet-600",
-  "from-pink-500 to-rose-600",
-  "from-orange-500 to-amber-600",
-  "from-cyan-500 to-sky-600",
-  "from-red-500 to-pink-600",
-  "from-lime-500 to-green-600",
-  "from-fuchsia-500 to-purple-600",
-  "from-yellow-500 to-orange-600",
+  "bg-emerald-700",
+  "bg-blue-600",
+  "bg-violet-600",
+  "bg-pink-700",
+  "bg-orange-700",
+  "bg-cyan-700",
+  "bg-red-600",
+  "bg-lime-700",
+  "bg-fuchsia-700",
+  "bg-amber-700",
 ] as const;

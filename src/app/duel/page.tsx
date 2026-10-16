@@ -121,8 +121,8 @@ export default function DuelPage() {
             <button onClick={() => router.push("/")} className="w-10 h-10 rounded-xl glass flex items-center justify-center">
               <ChevronLeft size={20} className="text-muted" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-neon-red/10 flex items-center justify-center">
-              <Swords className="text-neon-red" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center">
+              <Swords className="text-danger-ink" size={20} />
             </div>
             <div className="flex-1">
               <h1 className="text-xl font-bold">Pojedynki</h1>
@@ -133,9 +133,9 @@ export default function DuelPage() {
           {!creating && (
             <button
               onClick={() => setCreating(true)}
-              className="w-full glass glow-green border border-neon-green/30 rounded-2xl p-4 flex items-center gap-3 mb-6"
+              className="w-full glass glow-green border border-accent-ink/30 rounded-2xl p-4 flex items-center gap-3 mb-6"
             >
-              <Swords className="text-neon-green" size={20} />
+              <Swords className="text-accent-ink" size={20} />
               <span className="font-bold">Nowy pojedynek</span>
               <ChevronRight size={18} className="text-muted ml-auto" />
             </button>
@@ -154,7 +154,7 @@ export default function DuelPage() {
                       onClick={() => setGameMode(mode)}
                       className={`rounded-2xl p-3 text-center font-bold transition-all ${
                         gameMode === mode
-                          ? "glass glow-green border border-neon-green/30 text-neon-green"
+                          ? "glass glow-green border border-accent-ink/30 text-accent-ink"
                           : "glass border border-transparent text-muted"
                       }`}
                     >
@@ -176,7 +176,7 @@ export default function DuelPage() {
                       onClick={() => setLegsTarget(n)}
                       className={`rounded-xl py-2 font-bold transition-all ${
                         legsTarget === n
-                          ? "glass glow-green border border-neon-green/30 text-neon-green"
+                          ? "glass glow-green border border-accent-ink/30 text-accent-ink"
                           : "glass border border-transparent text-muted"
                       }`}
                     >
@@ -202,13 +202,13 @@ export default function DuelPage() {
                         key={p.id}
                         onClick={() => togglePlayer(p.id)}
                         className={`w-full glass rounded-2xl p-3 flex items-center gap-3 transition-all ${
-                          selected ? "border border-neon-green/40 glow-green" : "border border-transparent"
+                          selected ? "border border-accent-ink/40 glow-green" : "border border-transparent"
                         }`}
                       >
                         <PlayerAvatar avatarUrl={p.avatarUrl} displayName={p.displayName} colorIndex={colorIndex} size="sm" />
                         <span className="font-medium flex-1 text-left">{p.displayName}</span>
                         {selected && (
-                          <span className="w-6 h-6 rounded-full bg-neon-green text-background text-xs font-bold flex items-center justify-center">
+                          <span className="w-6 h-6 rounded-full bg-accent text-on-accent text-xs font-bold flex items-center justify-center">
                             {idx + 1}
                           </span>
                         )}
@@ -232,7 +232,7 @@ export default function DuelPage() {
                 <button
                   onClick={handleCreate}
                   disabled={selectedIds.length !== 2}
-                  className="flex-1 rounded-2xl p-3 font-bold bg-neon-green text-background glow-green disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-2xl p-3 font-bold bg-accent text-on-accent glow-green disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   Start
                 </button>
@@ -244,7 +244,7 @@ export default function DuelPage() {
           {!creating && duelTable.length > 0 && (
             <div className="glass rounded-2xl p-4 mb-6">
               <div className="flex items-center gap-2 mb-3">
-                <BarChart3 size={16} className="text-neon-red" />
+                <BarChart3 size={16} className="text-danger-ink" />
                 <h2 className="text-sm font-bold">Tabela pojedynków</h2>
               </div>
               <div className="overflow-x-auto">
@@ -270,7 +270,7 @@ export default function DuelPage() {
                             <div className="flex items-center gap-2 min-w-0">
                               <span
                                 className={`w-4 text-center font-mono font-bold shrink-0 ${
-                                  i === 0 ? "text-neon-yellow" : "text-muted"
+                                  i === 0 ? "text-warn-ink" : "text-muted"
                                 }`}
                               >
                                 {i + 1}
@@ -290,7 +290,7 @@ export default function DuelPage() {
                           </td>
                           <td
                             className={`text-center py-2 px-1 font-mono font-bold ${
-                              row.duelsWon > 0 ? "text-neon-yellow" : "text-muted"
+                              row.duelsWon > 0 ? "text-warn-ink" : "text-muted"
                             }`}
                           >
                             {row.duelsWon}
@@ -324,9 +324,9 @@ export default function DuelPage() {
                 <div key={s.duelId} className="glass rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-mono font-bold text-sm truncate">
-                      <span className={s.winnerId === s.p1Id ? "text-neon-green" : ""}>{s.p1Name}</span>
+                      <span className={s.winnerId === s.p1Id ? "text-accent-ink" : ""}>{s.p1Name}</span>
                       {" "}{"—"}{" "}
-                      <span className={s.winnerId === s.p2Id ? "text-neon-green" : ""}>{s.p2Name}</span>
+                      <span className={s.winnerId === s.p2Id ? "text-accent-ink" : ""}>{s.p2Name}</span>
                     </p>
                     <p className="text-xs text-muted">
                       do {s.target} wygranych{new Date(s.lastActivity).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
@@ -335,17 +335,17 @@ export default function DuelPage() {
                   <div className="flex items-center gap-2 shrink-0">
                     {s.winnerId ? (
                       <span className="font-mono text-lg font-bold">
-                        <span className="text-neon-green">{Math.max(s.w1, s.w2)}</span>
+                        <span className="text-accent-ink">{Math.max(s.w1, s.w2)}</span>
                         <span className="text-muted">–{Math.min(s.w1, s.w2)}</span>
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-neon-yellow/10 text-neon-yellow px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-warn/10 text-warn-ink px-2 py-0.5 rounded-full">
                         W toku
                       </span>
                     )}
                     <button
                       onClick={() => handleDelete(s.duelId)}
-                      className="text-muted hover:text-neon-red p-1"
+                      className="text-muted hover:text-danger-ink p-1"
                       aria-label="Usuń pojedynek"
                     >
                       <Trash2 size={16} />

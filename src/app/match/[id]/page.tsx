@@ -667,7 +667,6 @@ export default function MatchPage({
   }
 
   const currentPlayerId = match.playerIds[match.currentPlayerIndex];
-  const currentPlayerName = match.playerNames[match.currentPlayerIndex];
   const currentRemaining = match.scores[currentPlayerId]?.remaining ?? 0;
   const checkoutHint = currentRemaining <= 170 ? getCheckout(currentRemaining) : null;
 
@@ -684,12 +683,29 @@ export default function MatchPage({
   // Get last few turns for history
   const recentTurns = match.turns.slice(-6).reverse();
 
+  // Karta główna: rzucający (po checkoucie — zwycięzca), pozostali od następnego w kolejce
+  const heroIdx = match.currentPlayerIndex;
+  const heroId = match.playerIds[heroIdx];
+  const heroName = match.playerNames[heroIdx];
+  const heroState = match.scores[heroId];
+  const heroAvg = heroState.dartsThrown > 0
+    ? calculateThreeDartAvg(heroState.pointsScored, heroState.dartsThrown)
+    : 0;
+  const heroProgress = ((match.startingScore - heroState.remaining) / match.startingScore) * 100;
+  const heroLastTurn = [...match.turns].reverse().find((t) => t.playerId === heroId);
+  const playerCount = match.playerIds.length;
+  const nextIdx = (heroIdx + 1) % playerCount;
+  const otherIdxs = Array.from({ length: playerCount - 1 }, (_, i) => (heroIdx + 1 + i) % playerCount);
+  // Ekran musi się zmieścić bez przewijania w trakcie tury
+  const compactOthers = otherIdxs.length >= 3 || inputMode === "detailed";
+  const compactHero = inputMode === "detailed" || compactOthers;
+
   return (
     <div className="flex flex-col min-h-[100dvh] bg-background">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-lg font-bold text-neon-green">
+          <span className="font-mono text-lg font-bold text-accent-ink">
             {match.gameMode}
           </span>
           <span className="text-muted text-sm">
@@ -724,7 +740,7 @@ export default function MatchPage({
             className="p-2 rounded-xl hover:bg-surface transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             {voiceOn ? (
-              <Volume2 size={18} className="text-neon-green" />
+              <Volume2 size={18} className="text-accent-ink" />
             ) : (
               <VolumeX size={18} className="text-muted" />
             )}
@@ -745,140 +761,167 @@ export default function MatchPage({
             <button
               onClick={() => setShowExitConfirm(true)}
               aria-label="Opuść mecz"
-              className="p-2 rounded-xl hover:bg-neon-red/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2 rounded-xl hover:bg-danger/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
-              <X size={18} className="text-muted hover:text-neon-red" />
+              <X size={18} className="text-muted hover:text-danger-ink" />
             </button>
           )}
         </div>
       </div>
 
       {saveFailed && (
-        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-neon-yellow/10 border-b border-neon-yellow/20 text-neon-yellow text-xs font-medium">
+        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-warn/10 border-b border-warn-ink/20 text-warn-ink text-xs font-medium">
           <WifiOff size={14} />
           Brak połączenia — wynik zapisany na tym telefonie, wyślę go automatycznie
         </div>
       )}
 
-      {/* Scoreboard */}
-      <div className="px-3 py-2">
+      {/* Scoreboard: rzucający jako karta główna, pozostali w kolejności rzutów */}
+      <section
+        className="mx-3 mt-2 px-4 py-3 rounded-2xl bg-card border border-accent-ink/45 shadow-[var(--shadow-raised)] drog:mx-0 drog:mt-0 drog:rounded-none drog:border-0 drog:bg-accent drog:text-on-accent"
+      >
+        <div className="flex items-center gap-2.5">
+          <PlayerAvatar
+            avatarUrl={playersData.find((p) => p.id === heroId)?.avatarUrl}
+            displayName={heroName}
+            colorIndex={heroIdx}
+            size="sm"
+          />
+          <span className="flex-1 min-w-0 truncate text-lg font-semibold drog:text-2xl drog:font-extrabold">
+            {heroName}
+          </span>
+          {match.status === "active" ? (
+            <span className="px-2.5 py-1 rounded-full bg-accent text-on-accent text-[11px] font-bold tracking-widest drog:bg-foreground drog:text-accent">
+              RZUCA
+            </span>
+          ) : (
+            heroId === match.winnerId && (
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-warn text-on-warn text-[11px] font-bold tracking-widest drog:bg-foreground drog:text-accent">
+                <Trophy size={12} /> WYGRANA
+              </span>
+            )
+          )}
+        </div>
+        <div className="flex items-end justify-between mt-1">
+          <motion.span
+            key={`${heroId}-${heroState.remaining}`}
+            initial={{ scale: 1.08, opacity: 0.6 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className={`font-mono leading-none font-bold tracking-tight origin-left drog:font-extrabold ${
+              compactHero ? "text-[56px] drog:text-[64px]" : "text-[72px] drog:text-[84px]"
+            }`}
+          >
+            {heroState.remaining}
+          </motion.span>
+          <div className="flex flex-col items-end gap-0.5 pb-1 text-[13px] text-muted drog:text-on-accent">
+            <span>
+              śr. <span className="font-mono text-foreground drog:text-on-accent">{heroAvg.toFixed(1)}</span>
+            </span>
+            {heroLastTurn && (
+              <span>
+                ostatnio{" "}
+                <span className="font-mono text-foreground drog:text-on-accent">
+                  {heroLastTurn.isBust ? "bust" : heroLastTurn.turnTotal}
+                </span>
+              </span>
+            )}
+          </div>
+        </div>
+        <div className={`mt-2 h-[3px] rounded-full bg-surface-light overflow-hidden drog:hidden ${compactHero ? "hidden" : ""}`}>
+          <motion.div
+            className="h-full rounded-full bg-accent"
+            initial={false}
+            animate={{ width: `${heroProgress}%` }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          />
+        </div>
+        {checkoutHint && match.status === "active" && inputMode === "quick" && (
+          <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border drog:hidden">
+            <span className="text-[13px] text-muted">Zamknięcie</span>
+            <span className="font-mono text-[17px] font-semibold text-warn-ink">
+              {checkoutHint.split(" ").join(" · ")}
+            </span>
+          </div>
+        )}
+      </section>
+
+      {/* Drogowskaz: droga do zamknięcia jako znak */}
+      {checkoutHint && match.status === "active" && inputMode === "quick" && (
+        <div className="hidden drog:flex items-center gap-2 px-4 py-2.5 bg-foreground text-background">
+          <span className="mr-auto text-sm opacity-80">
+            {checkoutHint.split(" ").length > 2 ? "Zamknięcie" : "Droga do zamknięcia"}
+          </span>
+          {checkoutHint.split(" ").map((part, i) => (
+            <span key={i} className="flex items-center gap-2">
+              {i > 0 && (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-accent">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              )}
+              <span className="bg-accent text-on-accent font-extrabold text-lg px-2 py-0.5">{part}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {otherIdxs.length > 0 && (
         <div
-          className="grid gap-2"
-          style={{
-            gridTemplateColumns: `repeat(${Math.min(match.playerIds.length, 3)}, minmax(0, 1fr))`,
-          }}
+          className={`grid gap-2 mx-3 mt-2 grid-cols-[repeat(var(--cols),minmax(0,1fr))] drog:mx-4 drog:mt-1 drog:gap-y-0 ${
+            compactOthers ? "drog:grid-cols-2 drog:gap-x-5" : "drog:grid-cols-1"
+          }`}
+          style={{ "--cols": Math.min(otherIdxs.length, 4) } as React.CSSProperties}
         >
-          {match.playerIds.map((playerId, idx) => {
+          {otherIdxs.map((idx) => {
+            const playerId = match.playerIds[idx];
             const state = match.scores[playerId];
-            const name = match.playerNames[idx];
-            const isActive = idx === match.currentPlayerIndex && match.status === "active";
-            const isWinner = playerId === match.winnerId;
             const avg = state.dartsThrown > 0
               ? calculateThreeDartAvg(state.pointsScored, state.dartsThrown)
               : 0;
-            const progress = ((match.startingScore - state.remaining) / match.startingScore) * 100;
-
+            const isNext = match.status === "active" && idx === nextIdx && otherIdxs.length > 1;
             return (
               <motion.div
                 key={playerId}
                 layout
-                animate={isActive ? { scale: 1.05 } : { scale: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                className={`relative rounded-2xl p-3 transition-all duration-300 ${
-                  isActive
-                    ? "glass border-2 border-neon-green bg-neon-green/[0.08] pulse-active"
-                    : isWinner
-                    ? "glass glow-green border border-neon-green/50"
-                    : "glass border border-transparent player-inactive"
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className={`grid rounded-[14px] bg-card drog:grid-cols-[1fr_auto] drog:items-center drog:rounded-none drog:bg-transparent drog:px-0 drog:border-b drog:border-border ${
+                  compactOthers ? "px-2 py-1.5 drog:py-1" : "p-2.5 drog:py-2"
                 }`}
               >
-                {/* RZUCA label for active player */}
-                {isActive && (
-                  <motion.div
-                    layoutId="rzuca-label"
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 bg-neon-green text-background text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full z-10"
-                  >
-                    RZUCA
-                  </motion.div>
+                <span className={`flex items-center gap-1.5 min-w-0 text-foreground/75 drog:font-semibold drog:text-foreground ${
+                  compactOthers ? "text-xs drog:text-base" : "text-[13px] drog:text-lg"
+                }`}>
+                  {isNext && (
+                    <span className="hidden drog:inline bg-foreground text-accent text-[11px] font-bold px-1.5 py-0.5">
+                      NASTĘPNY
+                    </span>
+                  )}
+                  {isNext && (
+                    <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 drog:hidden" />
+                  )}
+                  <span className="truncate">{match.playerNames[idx]}</span>
+                </span>
+                <span className={`font-mono font-bold leading-tight tracking-tight drog:col-start-2 drog:row-start-1 drog:row-span-2 drog:font-extrabold ${
+                  compactOthers ? "text-[22px] drog:text-2xl" : "text-[28px] drog:text-[30px]"
+                }`}>
+                  {state.remaining}
+                </span>
+                {!compactOthers && (
+                  <span className="text-xs text-muted">
+                    śr. {avg.toFixed(1)}
+                    {isNext && <span className="text-accent-ink drog:hidden"> · następny</span>}
+                  </span>
                 )}
-
-                {/* Player avatar & name */}
-                <div className="flex items-center gap-2 mb-2">
-                  <PlayerAvatar
-                    avatarUrl={playersData.find((p) => p.id === playerId)?.avatarUrl}
-                    displayName={name}
-                    colorIndex={idx}
-                    size="sm"
-                  />
-                  <span className={`text-xs font-medium truncate ${isActive ? "text-neon-green font-bold" : "text-foreground"}`}>
-                    {name}
-                  </span>
-                  {isWinner && <Trophy size={14} className="text-neon-yellow shrink-0" />}
-                </div>
-
-                {/* Remaining score */}
-                <div className="text-center">
-                  <motion.span
-                    key={state.remaining}
-                    initial={{ scale: 1.15, opacity: 0.7 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className={`font-mono text-3xl font-bold block ${
-                      isWinner
-                        ? "text-neon-green text-glow-green"
-                        : isActive
-                        ? "text-foreground"
-                        : "text-foreground/70"
-                    }`}
-                  >
-                    {state.remaining}
-                  </motion.span>
-                </div>
-
-                {/* Progress bar */}
-                <div className="mt-2 h-1 rounded-full bg-surface overflow-hidden">
-                  <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-neon-green/50 to-neon-green"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </div>
-
-                {/* Stats */}
-                <div className="flex justify-center mt-2">
-                  <span className="text-xs font-bold font-mono text-muted">
-                    Śr: {avg.toFixed(1)}
-                  </span>
-                </div>
               </motion.div>
             );
           })}
         </div>
-      </div>
-
-      {/* Checkout suggestion */}
-      <AnimatePresence>
-        {checkoutHint && match.status === "active" && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="px-4 py-2"
-          >
-            <div className="glass-light rounded-xl px-4 py-2 text-center">
-              <span className="text-xs text-muted">Zamknięcie: </span>
-              <span className="font-mono text-sm text-neon-yellow font-medium">
-                {checkoutHint}
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      )}
 
       {/* Turn history */}
-      {recentTurns.length > 0 && (
-        <div className="px-4 py-1">
-          <div className="space-y-1 max-h-24 overflow-y-auto">
+      {recentTurns.length > 0 && inputMode === "quick" && (
+        <div className="px-4 pt-2">
+          <div className="space-y-1 max-h-[3.6rem] overflow-y-auto">
             {recentTurns.map((turn, i) => {
               const pIdx = match.playerIds.indexOf(turn.playerId);
               const pName = match.playerNames[pIdx] || "?";
@@ -893,13 +936,13 @@ export default function MatchPage({
                   <span
                     className={`font-mono font-medium ${
                       turn.isBust
-                        ? "text-neon-red"
+                        ? "text-danger-ink"
                         : turn.isCheckout
-                        ? "text-neon-green"
+                        ? "text-accent-ink"
                         : turn.turnTotal === 180
-                        ? "text-neon-yellow"
+                        ? "text-warn-ink"
                         : turn.turnTotal >= 100
-                        ? "text-neon-blue"
+                        ? "text-info-ink"
                         : "text-foreground/70"
                     }`}
                   >
@@ -923,8 +966,8 @@ export default function MatchPage({
             exit={{ opacity: 0, scale: 0.8 }}
             className="px-4 py-2"
           >
-            <div className="bg-neon-red/10 border border-neon-red/30 rounded-xl px-4 py-2 text-center">
-              <span className="text-neon-red font-bold text-sm">BUST! Brak punktów</span>
+            <div className="bg-danger/10 border border-danger-ink/30 rounded-xl px-4 py-2 text-center">
+              <span className="text-danger-ink font-bold text-sm">BUST! Brak punktów</span>
             </div>
           </motion.div>
         )}
@@ -935,8 +978,8 @@ export default function MatchPage({
             exit={{ opacity: 0 }}
             className="px-4 py-2"
           >
-            <div className="bg-neon-yellow/10 border border-neon-yellow/30 rounded-xl px-4 py-3 text-center">
-              <span className="text-neon-yellow font-bold text-lg">🎯 180!</span>
+            <div className="bg-warn/10 border border-warn-ink/30 rounded-xl px-4 py-3 text-center">
+              <span className="text-warn-ink font-bold text-lg">🎯 180!</span>
             </div>
           </motion.div>
         )}
@@ -948,12 +991,8 @@ export default function MatchPage({
       {/* Score input */}
       {match.status === "active" ? (
         <div className="px-4 pb-4 safe-bottom">
-          {/* Mode toggle + current player */}
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <span className="text-xs text-muted">Rzuca: </span>
-              <span className="text-sm font-medium text-neon-green">{currentPlayerName}</span>
-            </div>
+          {/* Tryb wpisywania + bieżący wynik tury (rzucającego pokazuje karta główna) */}
+          <div className="flex items-center justify-between mb-2 min-h-11">
             <div className="flex gap-1 p-0.5 bg-surface rounded-lg">
               <button
                 onClick={() => {
@@ -962,7 +1001,7 @@ export default function MatchPage({
                 }}
                 className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${
                   inputMode === "quick"
-                    ? "bg-neon-green/15 text-neon-green"
+                    ? "bg-accent/15 text-accent-ink"
                     : "text-muted"
                 }`}
               >
@@ -975,38 +1014,34 @@ export default function MatchPage({
                 }}
                 className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${
                   inputMode === "detailed"
-                    ? "bg-neon-purple/15 text-neon-purple"
+                    ? "bg-extra/15 text-extra-ink"
                     : "text-muted"
                 }`}
               >
                 Szczegółowy
               </button>
             </div>
+            {inputMode === "quick" && (
+              <motion.span
+                animate={invalidScore ? { x: [0, -8, 8, -6, 6, 0] } : { x: 0 }}
+                transition={{ duration: 0.35 }}
+                aria-live="polite"
+                className={`font-mono text-4xl font-bold leading-none ${
+                  invalidScore ? "text-danger-ink" : "text-foreground"
+                }`}
+              >
+                {inputValue || "0"}
+              </motion.span>
+            )}
           </div>
 
           {inputMode === "quick" ? (
             <>
-              {/* Input display */}
-              <motion.div
-                animate={invalidScore ? { x: [0, -8, 8, -6, 6, 0] } : { x: 0 }}
-                transition={{ duration: 0.35 }}
-                className={`glass rounded-2xl px-6 py-4 mb-3 text-center border ${
-                  invalidScore ? "border-neon-red/50" : "border-transparent"
-                }`}
-              >
-                <span
-                  className={`font-mono text-4xl font-bold ${
-                    invalidScore ? "text-neon-red" : "text-foreground"
-                  }`}
-                >
-                  {inputValue || "0"}
-                </span>
-                {invalidScore && (
-                  <span className="block text-xs text-neon-red mt-1">
-                    Tego wyniku nie da się rzucić 3 lotkami
-                  </span>
-                )}
-              </motion.div>
+              {invalidScore && (
+                <p className="-mt-1 mb-2 text-right text-xs text-danger-ink">
+                  Tego wyniku nie da się rzucić 3 lotkami
+                </p>
+              )}
 
               {/* Numpad */}
               <div className="grid grid-cols-4 gap-2">
@@ -1023,7 +1058,7 @@ export default function MatchPage({
                       }}
                       className={`h-14 sm:h-16 rounded-xl font-mono text-xl font-bold transition-all duration-100 ${
                         key === "⌫"
-                          ? "bg-surface-light text-neon-red hover:bg-neon-red/10"
+                          ? "bg-surface-light text-danger-ink hover:bg-danger/10"
                           : key === "C"
                           ? "bg-surface-light text-muted hover:bg-surface"
                           : "bg-surface hover:bg-surface-light text-foreground active:bg-card-hover"
@@ -1038,14 +1073,14 @@ export default function MatchPage({
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => submitScore(0)}
-                  className="col-span-2 h-14 sm:h-16 rounded-xl font-bold text-sm bg-surface-light text-neon-red hover:bg-neon-red/10 transition-all"
+                  className="col-span-2 h-14 sm:h-16 rounded-xl font-bold text-sm bg-surface-light text-danger-ink hover:bg-danger/10 transition-all"
                 >
                   NO SCORE
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleNumpad("OK")}
-                  className="col-span-2 h-14 sm:h-16 rounded-xl font-bold text-lg bg-neon-green text-background hover:bg-neon-green-dim glow-green transition-all"
+                  className="col-span-2 h-14 sm:h-16 rounded-xl font-bold text-lg bg-accent text-on-accent hover:bg-accent-dim glow-green transition-all"
                 >
                   OK
                 </motion.button>
@@ -1072,7 +1107,7 @@ export default function MatchPage({
           )}
           <button
             onClick={() => setShowWinModal(true)}
-            className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-blue"
+            className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-info-ink"
           >
             <BarChart3 size={18} />
             Statystyki meczu
@@ -1081,7 +1116,7 @@ export default function MatchPage({
             <button
               onClick={continueSeries}
               disabled={busy}
-              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-green disabled:opacity-40"
+              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-accent-ink disabled:opacity-40"
             >
               <Target size={18} />
               Kontynuuj serię
@@ -1093,7 +1128,7 @@ export default function MatchPage({
                 await setActiveMatch(null);
                 router.push(`/tournament/${match.tournamentId}`);
               }}
-              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-green glow-green"
+              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-accent-ink glow-green"
             >
               <Trophy size={18} />
               Powrót do turnieju
@@ -1104,7 +1139,7 @@ export default function MatchPage({
                 await setActiveMatch(null);
                 router.push("/duel");
               }}
-              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-red"
+              className="w-full glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-danger-ink"
             >
               <Swords size={18} />
               Powrót do pojedynków
@@ -1120,7 +1155,7 @@ export default function MatchPage({
               </button>
               <button
                 onClick={() => router.push("/stats")}
-                className="flex-1 glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-neon-green"
+                className="flex-1 glass rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-medium text-accent-ink"
               >
                 <BarChart3 size={18} />
                 Statystyki
@@ -1145,9 +1180,9 @@ export default function MatchPage({
               exit={{ scale: 0.9, opacity: 0 }}
               className="glass rounded-2xl p-6 w-full max-w-sm text-center"
             >
-              <Trophy size={32} className="text-neon-yellow mx-auto mb-3" />
+              <Trophy size={32} className="text-warn-ink mx-auto mb-3" />
               <h3 className="text-lg font-bold mb-1">
-                Leg dla <span className="text-neon-green">{match.winnerName}</span>
+                Leg dla <span className="text-accent-ink">{match.winnerName}</span>
               </h3>
               <p className="text-sm text-muted mb-5">
                 Zamknięcie {match.turns[match.turns.length - 1]?.turnTotal}. Wszystko się zgadza?
@@ -1164,7 +1199,7 @@ export default function MatchPage({
                 <button
                   onClick={continueSeries}
                   disabled={busy}
-                  className="rounded-xl p-3 bg-neon-green text-background font-bold glow-green hover:bg-neon-green-dim transition-all disabled:opacity-40"
+                  className="rounded-xl p-3 bg-accent text-on-accent font-bold glow-green hover:bg-accent-dim transition-all disabled:opacity-40"
                 >
                   {busy ? "Chwila…" : "Dalej"}
                 </button>
@@ -1189,7 +1224,7 @@ export default function MatchPage({
               exit={{ scale: 0.9, opacity: 0 }}
               className="glass rounded-2xl p-6 w-full max-w-sm text-center"
             >
-              <Target size={32} className="text-neon-red mx-auto mb-3" />
+              <Target size={32} className="text-danger-ink mx-auto mb-3" />
               <h3 className="text-lg font-bold mb-1">Rzut na bulla</h3>
               <p className="text-sm text-muted mb-5">
                 Kto trafił bliżej środka? Ten gracz zaczyna.
@@ -1206,7 +1241,7 @@ export default function MatchPage({
                       key={pid}
                       onClick={() => pickBullWinner(i)}
                       className={`glass rounded-xl p-4 flex flex-col items-center gap-2 transition-all border ${
-                        i === 0 ? "border-neon-green/30 hover:border-neon-green/60" : "border-blue-500/30 hover:border-blue-400/60"
+                        i === 0 ? "border-accent-ink/30 hover:border-accent-ink/60" : "border-blue-500/30 hover:border-blue-400/60"
                       }`}
                     >
                       <PlayerAvatar
@@ -1247,13 +1282,13 @@ export default function MatchPage({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => confirmDouble(false)}
-                  className="rounded-xl p-3 bg-surface text-neon-red font-medium hover:bg-neon-red/10 transition-all"
+                  className="rounded-xl p-3 bg-surface text-danger-ink font-medium hover:bg-danger/10 transition-all"
                 >
                   Nie (Bust)
                 </button>
                 <button
                   onClick={() => confirmDouble(true)}
-                  className="rounded-xl p-3 bg-neon-green text-background font-bold glow-green hover:bg-neon-green-dim transition-all"
+                  className="rounded-xl p-3 bg-accent text-on-accent font-bold glow-green hover:bg-accent-dim transition-all"
                 >
                   Tak! ✓
                 </button>
@@ -1285,9 +1320,9 @@ export default function MatchPage({
                   animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
                   transition={{ duration: 0.6, delay: 0.3 }}
                 >
-                  <Trophy size={48} className="text-neon-yellow mx-auto mb-3" />
+                  <Trophy size={48} className="text-warn-ink mx-auto mb-3" />
                 </motion.div>
-                <h2 className="text-2xl font-bold mb-1 text-neon-green text-glow-green">
+                <h2 className="text-2xl font-bold mb-1 text-accent-ink text-glow-green">
                   {match.winnerName}
                 </h2>
                 <p className="text-muted text-sm">wygrywa mecz!</p>
@@ -1338,7 +1373,7 @@ export default function MatchPage({
                 </button>
                 <button
                   onClick={abandonMatch}
-                  className="rounded-xl p-3 bg-neon-red/15 text-neon-red font-bold border border-neon-red/30 hover:bg-neon-red/25 transition-all"
+                  className="rounded-xl p-3 bg-danger/15 text-danger-ink font-bold border border-danger-ink/30 hover:bg-danger/25 transition-all"
                 >
                   Opuść mecz
                 </button>

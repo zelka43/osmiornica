@@ -60,8 +60,8 @@ export default function PointsTrainingPage() {
             >
               <ChevronLeft size={20} className="text-muted" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-neon-red/10 flex items-center justify-center">
-              <BarChart2 className="text-neon-red" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center">
+              <BarChart2 className="text-danger-ink" size={20} />
             </div>
             <div>
               <h1 className="text-xl font-bold">Trening punktowy</h1>
@@ -80,11 +80,11 @@ export default function PointsTrainingPage() {
                       onClick={() => setRoundCount(n)}
                       className={`rounded-2xl p-6 text-center transition-all duration-200 ${
                         roundCount === n
-                          ? "glass glow-green border border-neon-green/30"
+                          ? "glass glow-green border border-accent-ink/30"
                           : "glass border border-transparent hover:border-border-bright"
                       }`}
                     >
-                      <span className={`font-mono text-4xl font-bold ${roundCount === n ? "text-neon-green text-glow-green" : ""}`}>
+                      <span className={`font-mono text-4xl font-bold ${roundCount === n ? "text-accent-ink text-glow-green" : ""}`}>
                         {n}
                       </span>
                       <p className="text-sm text-muted mt-1">rund</p>
@@ -93,7 +93,7 @@ export default function PointsTrainingPage() {
                 </div>
                 <button
                   onClick={() => setPhase("playing")}
-                  className="w-full rounded-2xl p-4 bg-neon-green text-background font-bold text-lg glow-green"
+                  className="w-full rounded-2xl p-4 bg-accent text-on-accent font-bold text-lg glow-green"
                 >
                   Rozpocznij
                 </button>
@@ -105,11 +105,11 @@ export default function PointsTrainingPage() {
                 {/* Progress */}
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm text-muted">Runda</span>
-                  <span className="font-mono font-bold text-neon-green">{currentRound} / {roundCount}</span>
+                  <span className="font-mono font-bold text-accent-ink">{currentRound} / {roundCount}</span>
                 </div>
                 <div className="w-full h-1.5 bg-surface rounded-full mb-6">
                   <div
-                    className="h-full bg-neon-green rounded-full transition-all duration-300"
+                    className="h-full bg-accent rounded-full transition-all duration-300"
                     style={{ width: `${(scores.length / roundCount) * 100}%` }}
                   />
                 </div>
@@ -118,11 +118,11 @@ export default function PointsTrainingPage() {
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   <div className="glass rounded-2xl p-4 text-center">
                     <p className="text-xs text-muted mb-1">Suma</p>
-                    <p className="font-mono text-2xl font-bold text-neon-green">{total}</p>
+                    <p className="font-mono text-2xl font-bold text-accent-ink">{total}</p>
                   </div>
                   <div className="glass rounded-2xl p-4 text-center">
                     <p className="text-xs text-muted mb-1">Średnia</p>
-                    <p className="font-mono text-2xl font-bold text-neon-blue">{avg.toFixed(1)}</p>
+                    <p className="font-mono text-2xl font-bold text-info-ink">{avg.toFixed(1)}</p>
                   </div>
                 </div>
 
@@ -158,9 +158,9 @@ export default function PointsTrainingPage() {
                       }}
                       className={`rounded-xl py-4 font-mono font-bold text-xl transition-all active:scale-95 ${
                         k === "✓"
-                          ? "bg-neon-green text-background glow-green"
+                          ? "bg-accent text-on-accent glow-green"
                           : k === "DEL"
-                          ? "glass text-neon-red"
+                          ? "glass text-danger-ink"
                           : "glass hover:border-border-bright"
                       }`}
                     >
@@ -189,11 +189,11 @@ export default function PointsTrainingPage() {
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   <div className="glass rounded-2xl p-5 text-center">
                     <p className="text-xs text-muted mb-1">Suma</p>
-                    <p className="font-mono text-3xl font-bold text-neon-green">{total}</p>
+                    <p className="font-mono text-3xl font-bold text-accent-ink">{total}</p>
                   </div>
                   <div className="glass rounded-2xl p-5 text-center">
                     <p className="text-xs text-muted mb-1">Średnia/3</p>
-                    <p className="font-mono text-3xl font-bold text-neon-blue">{avg.toFixed(1)}</p>
+                    <p className="font-mono text-3xl font-bold text-info-ink">{avg.toFixed(1)}</p>
                   </div>
                 </div>
 

@@ -182,8 +182,8 @@ export default function StatsPage() {
           {/* Title */}
           <motion.div variants={item} className="text-center pt-4 pb-2">
             <div className="flex items-center justify-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-xl bg-neon-blue/10 flex items-center justify-center">
-                <BarChart3 size={22} className="text-neon-blue" />
+              <div className="w-10 h-10 rounded-xl bg-info/10 flex items-center justify-center">
+                <BarChart3 size={22} className="text-info-ink" />
               </div>
               <h1 className="text-2xl font-bold text-foreground tracking-tight">
                 Statystyki
@@ -203,7 +203,7 @@ export default function StatsPage() {
                   onClick={() => handlePeriodChange(p)}
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
                     period === p
-                      ? "bg-neon-blue/15 text-neon-blue border border-neon-blue/30"
+                      ? "bg-info/15 text-info-ink border border-info-ink/30"
                       : "text-muted hover:text-foreground"
                   }`}
                 >
@@ -262,7 +262,7 @@ export default function StatsPage() {
               <motion.div variants={item}>
                 <div className="overflow-x-auto -mx-4 px-4">
                 <div className="glass rounded-2xl overflow-hidden min-w-[600px]">
-                  <div className="grid grid-cols-[2rem_6rem_2.5rem_2.5rem_3rem_3.5rem_3rem_2.5rem] gap-1 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted border-b border-white/5">
+                  <div className="grid grid-cols-[2rem_6rem_2.5rem_2.5rem_3rem_3.5rem_3rem_2.5rem] gap-1 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted border-b border-foreground/5">
                     <span className="text-center">#</span>
                     <span>Gracz</span>
                     <span className="text-center">M</span>
@@ -282,13 +282,13 @@ export default function StatsPage() {
                         variants={item}
                         className={`grid grid-cols-[2rem_6rem_2.5rem_2.5rem_3rem_3.5rem_3rem_2.5rem] gap-1 items-center px-3 py-3 transition-colors ${
                           isTop
-                            ? "bg-neon-green/[0.04] glow-green"
-                            : "hover:bg-white/[0.02]"
-                        } border-b border-white/5`}
+                            ? "bg-accent/[0.04] glow-green"
+                            : "hover:bg-foreground/[0.02]"
+                        } border-b border-foreground/5`}
                       >
                         <span
-                          className={`text-center font-mono font-bold text-sm ${
-                            isTop ? "text-neon-green" : "text-muted"
+                          className={`text-center font-mono font-bold text-sm drog:mx-auto drog:w-7 drog:h-7 drog:flex drog:items-center drog:justify-center drog:bg-foreground ${
+                            isTop ? "text-accent-ink drog:text-accent" : "text-muted drog:text-background"
                           }`}
                         >
                           {idx + 1}
@@ -302,30 +302,30 @@ export default function StatsPage() {
                           />
                           <span
                             className={`text-sm font-medium truncate ${
-                              isTop ? "text-neon-green" : "text-foreground"
+                              isTop ? "text-accent-ink" : "text-foreground"
                             }`}
                           >
                             {r.player.displayName}
                           </span>
                           {isTop && (
-                            <Award size={14} className="text-neon-yellow shrink-0" />
+                            <Award size={14} className="text-warn-ink shrink-0" />
                           )}
                         </div>
                         <span className="text-center font-mono text-sm text-muted">{r.stats.matchesPlayed}</span>
                         <span className="text-center font-mono text-sm text-foreground">{r.stats.matchesWon}</span>
-                        <span className={`text-center font-mono text-sm font-semibold ${isTop ? "text-neon-green" : "text-foreground"}`}>
+                        <span className={`text-center font-mono text-sm font-semibold ${isTop ? "text-accent-ink" : "text-foreground"}`}>
                           {rankingMode === "points" ? r.points.toFixed(1) : rankingMode === "rating" ? r.rating.toFixed(2) : r.winPct.toFixed(0)}
                         </span>
-                        <span className="text-center font-mono text-sm text-neon-blue">{r.threeDartAvg.toFixed(1)}</span>
-                        <span className="text-center font-mono text-sm text-neon-purple">{r.checkoutPct.toFixed(1)}</span>
-                        <span className="text-center font-mono text-sm text-neon-yellow">{r.stats.tonPlus + r.stats.oneEighties}</span>
+                        <span className="text-center font-mono text-sm text-info-ink">{r.threeDartAvg.toFixed(1)}</span>
+                        <span className="text-center font-mono text-sm text-extra-ink">{r.checkoutPct.toFixed(1)}</span>
+                        <span className="text-center font-mono text-sm text-warn-ink">{r.stats.tonPlus + r.stats.oneEighties}</span>
                       </motion.div>
                     );
                   })}
 
                   {/* Separator — unranked players */}
                   {unrankedRows.length > 0 && rankedRows.length > 0 && (
-                    <div className="border-t border-dashed border-white/20 mx-3 mt-0" />
+                    <div className="border-t border-dashed border-foreground/20 mx-3 mt-0" />
                   )}
                   {unrankedRows.length > 0 && (
                     <div className="px-3 py-1 text-[10px] text-muted text-center">
@@ -338,8 +338,8 @@ export default function StatsPage() {
                     <motion.div
                       key={r.player.id}
                       variants={item}
-                      className={`grid grid-cols-[2rem_6rem_2.5rem_2.5rem_3rem_3.5rem_3rem_2.5rem] gap-1 items-center px-3 py-3 opacity-40 hover:bg-white/[0.02] transition-colors ${
-                        idx < unrankedRows.length - 1 ? "border-b border-white/5" : ""
+                      className={`grid grid-cols-[2rem_6rem_2.5rem_2.5rem_3rem_3.5rem_3rem_2.5rem] gap-1 items-center px-3 py-3 opacity-40 hover:bg-foreground/[0.02] transition-colors ${
+                        idx < unrankedRows.length - 1 ? "border-b border-foreground/5" : ""
                       }`}
                     >
                       <span className="text-center font-mono font-bold text-sm text-muted">—</span>
@@ -357,9 +357,9 @@ export default function StatsPage() {
                       <span className="text-center font-mono text-sm font-semibold text-foreground">
                         {rankingMode === "points" ? r.points.toFixed(1) : rankingMode === "rating" ? r.rating.toFixed(2) : r.winPct.toFixed(0)}
                       </span>
-                      <span className="text-center font-mono text-sm text-neon-blue">{r.threeDartAvg.toFixed(1)}</span>
-                      <span className="text-center font-mono text-sm text-neon-purple">{r.checkoutPct.toFixed(1)}</span>
-                      <span className="text-center font-mono text-sm text-neon-yellow">{r.stats.tonPlus + r.stats.oneEighties}</span>
+                      <span className="text-center font-mono text-sm text-info-ink">{r.threeDartAvg.toFixed(1)}</span>
+                      <span className="text-center font-mono text-sm text-extra-ink">{r.checkoutPct.toFixed(1)}</span>
+                      <span className="text-center font-mono text-sm text-warn-ink">{r.stats.tonPlus + r.stats.oneEighties}</span>
                     </motion.div>
                   ))}
                 </div>

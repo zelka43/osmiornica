@@ -153,8 +153,8 @@ export default function TournamentBracketPage({ params }: { params: Promise<{ id
             <button onClick={() => router.push("/tournament")} className="w-10 h-10 rounded-xl glass flex items-center justify-center">
               <ChevronLeft size={20} className="text-muted" />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-neon-yellow/10 flex items-center justify-center">
-              <Trophy className="text-neon-yellow" size={20} />
+            <div className="w-10 h-10 rounded-xl bg-warn/10 flex items-center justify-center">
+              <Trophy className="text-warn-ink" size={20} />
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-bold truncate">{tournament.name}</h1>
@@ -164,10 +164,10 @@ export default function TournamentBracketPage({ params }: { params: Promise<{ id
 
           {/* Baner mistrza */}
           {champName && (
-            <div className="glass glow-green rounded-2xl p-5 mb-5 text-center border border-neon-yellow/30">
-              <Trophy size={36} className="text-neon-yellow mx-auto mb-2" />
+            <div className="glass glow-green rounded-2xl p-5 mb-5 text-center border border-warn-ink/30">
+              <Trophy size={36} className="text-warn-ink mx-auto mb-2" />
               <p className="text-xs text-muted uppercase tracking-wider">Zwycięzca</p>
-              <p className="text-2xl font-bold text-neon-green text-glow-green">{champName}</p>
+              <p className="text-2xl font-bold text-accent-ink text-glow-green">{champName}</p>
             </div>
           )}
 
@@ -197,18 +197,18 @@ export default function TournamentBracketPage({ params }: { params: Promise<{ id
                           key={node.id}
                           className={`glass rounded-2xl p-3 transition-all ${
                             playable
-                              ? "border-2 border-neon-green/40 glow-green"
+                              ? "border-2 border-accent-ink/40 glow-green"
                               : isBye
-                              ? "border border-neon-yellow/20"
+                              ? "border border-warn-ink/20"
                               : decided
-                              ? "border border-white/5 opacity-75"
+                              ? "border border-foreground/5 opacity-75"
                               : "border border-transparent"
                           }`}
                         >
                           {isBye ? (
                             <div className="flex items-center justify-between gap-2">
                               <span className="font-bold text-sm">{nameOf(node.winnerId)}</span>
-                              <span className="text-[10px] font-black uppercase tracking-widest bg-neon-yellow/10 text-neon-yellow px-2 py-0.5 rounded-full shrink-0">
+                              <span className="text-[10px] font-black uppercase tracking-widest bg-warn/10 text-warn-ink px-2 py-0.5 rounded-full shrink-0">
                                 Wolny los
                               </span>
                             </div>
@@ -222,13 +222,13 @@ export default function TournamentBracketPage({ params }: { params: Promise<{ id
                                 isWinner={decided && node.winnerId === node.p1Id}
                               />
                               <div className="flex items-center gap-2 my-1.5">
-                                <div className="h-px bg-white/5 flex-1" />
+                                <div className="h-px bg-foreground/5 flex-1" />
                                 {(node.p1Id || node.p2Id) && (
                                   <span className="font-mono text-[11px] font-bold text-muted">
                                     {w1}:{w2}
                                   </span>
                                 )}
-                                <div className="h-px bg-white/5 flex-1" />
+                                <div className="h-px bg-foreground/5 flex-1" />
                               </div>
                               <PlayerRow
                                 name={nameOf(node.p2Id)}
@@ -240,7 +240,7 @@ export default function TournamentBracketPage({ params }: { params: Promise<{ id
                               {playable && (
                                 <button
                                   onClick={() => handlePlay(node)}
-                                  className="w-full mt-3 rounded-xl py-2.5 font-bold bg-neon-green text-background glow-green flex items-center justify-center gap-2"
+                                  className="w-full mt-3 rounded-xl py-2.5 font-bold bg-accent text-on-accent glow-green flex items-center justify-center gap-2"
                                 >
                                   <Play size={16} />
                                   {unfinishedLeg
@@ -284,18 +284,18 @@ function PlayerRow({
       <span
         className={`text-sm truncate flex items-center gap-1.5 ${
           isWinner
-            ? "font-bold text-neon-green"
+            ? "font-bold text-accent-ink"
             : known
             ? "font-medium"
             : "italic text-muted/60"
         }`}
       >
-        {isWinner && <Trophy size={13} className="text-neon-yellow shrink-0" />}
+        {isWinner && <Trophy size={13} className="text-warn-ink shrink-0" />}
         {known ? name : "Czeka…"}
       </span>
       <span
         className={`font-mono text-sm font-bold shrink-0 px-1.5 rounded-md ${
-          isWinner ? "text-neon-green bg-neon-green/10" : legs > 0 ? "text-muted" : "text-muted/50"
+          isWinner ? "text-accent-ink bg-accent/10" : legs > 0 ? "text-muted" : "text-muted/50"
         }`}
       >
         {legs}
